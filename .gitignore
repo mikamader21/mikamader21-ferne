@@ -68,3 +68,4 @@ gallery/
 # Logs de ejecuciones de CI descargados manualmente
 pipeline-*.log
 error-run-*.log
+FERNE-BUILD-LOG/

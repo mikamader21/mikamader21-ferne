@@ -7,7 +7,13 @@ import SwiftUI
 /// detiene el movimiento. Con `Reduce Transparency` se opacan las capas suaves.
 public struct SkyScene: View {
     @Environment(\.ferneTheme) private var theme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
+
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     /// Intensidad de la escena: 1.0 en Splash e Inicio, menor detrás de listas densas.

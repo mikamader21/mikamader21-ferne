@@ -44,11 +44,39 @@ public enum FerneMotion {
     }
 }
 
+// MARK: - Override de Reduce Motion
+
+/// Sobrescritura de Reduce Motion propia de FERNÉ.
+///
+/// `\.accessibilityReduceMotion` es de **solo lectura**: SwiftUI la expone como
+/// `KeyPath`, no como `WritableKeyPath`, así que no puede escribirse con
+/// `.environment(_:_:)`. Esta clave es la vía escribible.
+///
+/// - `nil` (lo normal): manda el ajuste real de iOS.
+/// - `true` / `false`: solo lo fijan los UI tests, para que las capturas de la
+///   variante Reduce Motion sean deterministas.
+private struct FerneReduceMotionOverrideKey: EnvironmentKey {
+    static let defaultValue: Bool? = nil
+}
+
+public extension EnvironmentValues {
+    /// Sobrescritura opcional de Reduce Motion. Ver `FerneReduceMotionOverrideKey`.
+    var ferneReduceMotionOverride: Bool? {
+        get { self[FerneReduceMotionOverrideKey.self] }
+        set { self[FerneReduceMotionOverrideKey.self] = newValue }
+    }
+}
+
 /// Modificador que desactiva por completo la animación ambiental cuando corresponde.
 public struct AmbientMotion: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
     let animation: Animation
     @Binding var isAnimating: Bool
+
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     public func body(content: Content) -> some View {
         content

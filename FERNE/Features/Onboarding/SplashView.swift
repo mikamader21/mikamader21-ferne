@@ -9,7 +9,12 @@ import SwiftUI
 /// Fase 0 entrega la escena y el ritmo; el pulido cinematográfico final es Fase 7.
 struct SplashView: View {
     @Environment(\.ferneTheme) private var theme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     let onFinish: () -> Void
 

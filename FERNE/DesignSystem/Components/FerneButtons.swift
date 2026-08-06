@@ -2,7 +2,12 @@ import SwiftUI
 
 /// Botón principal: degradado rosa-coral, texto blanco (§4.4).
 public struct FernePrimaryButtonStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     public init() {}
 
@@ -24,7 +29,12 @@ public struct FernePrimaryButtonStyle: ButtonStyle {
 
 /// Botón secundario: blanco cálido con borde rosa (§4.4).
 public struct FerneSecondaryButtonStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     public init() {}
 
@@ -61,7 +71,13 @@ public extension ButtonStyle where Self == FerneSecondaryButtonStyle {
 
 /// FAB `+`: círculo rosa con haptic suave (§4.4).
 public struct FerneFloatingActionButton: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
+
     private let action: () -> Void
 
     public init(action: @escaping () -> Void) {

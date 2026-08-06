@@ -2,7 +2,12 @@ import SwiftUI
 
 /// Círculo de progreso animado (Inicio · "Mi día", Progreso, Resumen).
 public struct FerneProgressRing: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
 
     /// 0…1.
     private let value: Double
@@ -51,7 +56,13 @@ public struct FerneProgressRing: View {
 
 /// Barra de progreso animada.
 public struct FerneProgressBar: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
+
     private let value: Double
     private let accessibilityLabel: String
 
@@ -79,7 +90,13 @@ public struct FerneProgressBar: View {
 
 /// Check elástico al completar (§4.6).
 public struct FerneCheckmark: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.ferneReduceMotionOverride) private var reduceMotionOverride
+    /// Reduce Motion efectivo: el override de los UI tests si existe, si no el ajuste del sistema.
+    private var reduceMotion: Bool {
+        reduceMotionOverride ?? systemReduceMotion
+    }
+
     private let isChecked: Bool
 
     public init(isChecked: Bool) {

@@ -28,14 +28,17 @@ private extension View {
     /// Permite capturar la variante Reduce Motion sin tocar el ajuste del sistema.
     ///
     /// **Solo sobrescribe cuando el UI test lo pide explícitamente.** Si se aplicara
-    /// siempre, un build normal pisaría el ajuste real de iOS con `false` y FERNÉ
-    /// dejaría de respetar Reduce Motion para quien lo tiene activado.
+    /// siempre, un build normal pisaría el ajuste real de iOS y FERNÉ dejaría de
+    /// respetar Reduce Motion para quien lo tiene activado.
+    ///
+    /// Se escribe `\.ferneReduceMotionOverride`, no `\.accessibilityReduceMotion`:
+    /// esta última es de solo lectura y no admite `.environment(_:_:)`.
     ///
     /// No sustituye a verificar el ajuste real del sistema: ver `docs/VISUAL_QA_MATRIX.md`.
     @ViewBuilder
     func forcedReduceMotionForScreenshots() -> some View {
         if UITestConfiguration.forcesReduceMotion {
-            environment(\.accessibilityReduceMotion, true)
+            environment(\.ferneReduceMotionOverride, true)
         } else {
             self
         }
