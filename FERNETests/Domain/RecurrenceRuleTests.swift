@@ -10,21 +10,23 @@ import XCTest
 final class RecurrenceRuleTests: XCTestCase {
     private let calendar = TestSupport.calendar()
 
-    func testDailyRuleOccursEveryDay() {
+    func testDailyRuleOccursEveryDay() throws {
         let anchor = TestSupport.date(2026, 8, 3, 7, calendar: calendar)
         let rule = RecurrenceRule.daily
         for offset in 0 ..< 10 {
-            let day = calendar.date(byAdding: .day, value: offset, to: anchor)!
+            let day = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: anchor))
             XCTAssertTrue(rule.occurs(on: day, anchor: anchor, calendar: calendar))
         }
     }
 
-    func testDailyRuleWithIntervalSkipsDays() {
+    func testDailyRuleWithIntervalSkipsDays() throws {
         let anchor = TestSupport.date(2026, 8, 3, 7, calendar: calendar)
         let rule = RecurrenceRule(frequency: .diaria, interval: 3)
+        let dayAfter = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: anchor))
+        let threeDaysAfter = try XCTUnwrap(calendar.date(byAdding: .day, value: 3, to: anchor))
         XCTAssertTrue(rule.occurs(on: anchor, anchor: anchor, calendar: calendar))
-        XCTAssertFalse(rule.occurs(on: calendar.date(byAdding: .day, value: 1, to: anchor)!, anchor: anchor, calendar: calendar))
-        XCTAssertTrue(rule.occurs(on: calendar.date(byAdding: .day, value: 3, to: anchor)!, anchor: anchor, calendar: calendar))
+        XCTAssertFalse(rule.occurs(on: dayAfter, anchor: anchor, calendar: calendar))
+        XCTAssertTrue(rule.occurs(on: threeDaysAfter, anchor: anchor, calendar: calendar))
     }
 
     func testWeekdaysOnlyRuleExcludesWeekend() {

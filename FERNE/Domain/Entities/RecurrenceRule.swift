@@ -53,23 +53,43 @@ public struct RecurrenceRule: Codable, Hashable, Sendable {
 
         switch frequency {
         case .diaria:
-            guard let days = calendar.dateComponents([.day], from: startDay, to: targetDay).day else { return false }
-            return days % interval == 0
+            return occursDaily(from: startDay, to: targetDay, calendar: calendar)
         case .semanal:
-            guard let weeks = calendar.dateComponents([.weekOfYear], from: startDay, to: targetDay).weekOfYear else { return false }
-            guard weeks % interval == 0 else { return false }
-            if weekdays.isEmpty {
-                return calendar.component(.weekday, from: targetDay) == calendar.component(.weekday, from: startDay)
-            }
-            return weekdays.contains(calendar.component(.weekday, from: targetDay))
+            return occursWeekly(from: startDay, to: targetDay, calendar: calendar)
         case .mensual:
-            guard let months = calendar.dateComponents([.month], from: startDay, to: targetDay).month else { return false }
-            guard months % interval == 0 else { return false }
-            return calendar.component(.day, from: targetDay) == calendar.component(.day, from: startDay)
+            return occursMonthly(from: startDay, to: targetDay, calendar: calendar)
         case .personalizada:
-            guard !weekdays.isEmpty else { return false }
-            return weekdays.contains(calendar.component(.weekday, from: targetDay))
+            return occursOnSelectedWeekday(targetDay, calendar: calendar)
         }
+    }
+
+    /// Cada `interval` días desde el ancla.
+    private func occursDaily(from startDay: Date, to targetDay: Date, calendar: Calendar) -> Bool {
+        guard let days = calendar.dateComponents([.day], from: startDay, to: targetDay).day else { return false }
+        return days % interval == 0
+    }
+
+    /// Cada `interval` semanas. Sin días marcados, repite el mismo día de la semana del ancla.
+    private func occursWeekly(from startDay: Date, to targetDay: Date, calendar: Calendar) -> Bool {
+        guard let weeks = calendar.dateComponents([.weekOfYear], from: startDay, to: targetDay).weekOfYear else { return false }
+        guard weeks % interval == 0 else { return false }
+        if weekdays.isEmpty {
+            return calendar.component(.weekday, from: targetDay) == calendar.component(.weekday, from: startDay)
+        }
+        return weekdays.contains(calendar.component(.weekday, from: targetDay))
+    }
+
+    /// Cada `interval` meses, el mismo día del mes que el ancla.
+    private func occursMonthly(from startDay: Date, to targetDay: Date, calendar: Calendar) -> Bool {
+        guard let months = calendar.dateComponents([.month], from: startDay, to: targetDay).month else { return false }
+        guard months % interval == 0 else { return false }
+        return calendar.component(.day, from: targetDay) == calendar.component(.day, from: startDay)
+    }
+
+    /// Solo en los días de la semana marcados. Sin ninguno marcado, nunca ocurre.
+    private func occursOnSelectedWeekday(_ targetDay: Date, calendar: Calendar) -> Bool {
+        guard !weekdays.isEmpty else { return false }
+        return weekdays.contains(calendar.component(.weekday, from: targetDay))
     }
 
     public var displayName: String {
