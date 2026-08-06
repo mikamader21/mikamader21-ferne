@@ -40,6 +40,12 @@ targets:
       # las previews y las capturas de QA visual. En la Fase 1, cuando las vistas
       # pasen a leer de SwiftData, su contenido se envolverá en `#if DEBUG`.
       - path: FERNE
+        excludes:
+          # Los README de Resources/ son documentación para quien desarrolla, no
+          # recursos de la app. XcodeGen los tomaba como recursos y los tres
+          # colapsaban en la misma ruta del bundle (FERNE.app/README.md), lo que
+          # rompía el build con "Multiple commands produce".
+          - "**/README.md"
     info:
       path: FERNE/Resources/Info.plist
       properties:
