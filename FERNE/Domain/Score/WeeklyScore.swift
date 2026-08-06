@@ -72,13 +72,32 @@ public struct WeeklyScore: Hashable, Codable, Sendable {
         .forScore(rawScore)
     }
 
+    /// Un componente del score semanal, con su valor y su peso.
+    public struct Component: Hashable, Codable, Sendable, Identifiable {
+        public let label: String
+        /// Valor del componente, 0…100.
+        public let value: Double
+        /// Peso en el total, 0…1.
+        public let weight: Double
+
+        public var id: String {
+            label
+        }
+
+        public init(label: String, value: Double, weight: Double) {
+            self.label = label
+            self.value = value
+            self.weight = weight
+        }
+    }
+
     /// Desglose para la pantalla 38 "Detalle del score": el score debe explicarse siempre.
-    public var breakdown: [(label: String, value: Double, weight: Double)] {
+    public var breakdown: [Component] {
         [
-            ("Cumplimiento diario", dailyComponent, Self.dailyWeight),
-            ("Rutinas", routineComponent, Self.routineWeight),
-            ("Horarios importantes", keyScheduleComponent, Self.keyScheduleWeight),
-            ("Compromisos semanales", commitmentComponent, Self.commitmentWeight),
+            Component(label: "Cumplimiento diario", value: dailyComponent, weight: Self.dailyWeight),
+            Component(label: "Rutinas", value: routineComponent, weight: Self.routineWeight),
+            Component(label: "Horarios importantes", value: keyScheduleComponent, weight: Self.keyScheduleWeight),
+            Component(label: "Compromisos semanales", value: commitmentComponent, weight: Self.commitmentWeight)
         ]
     }
 

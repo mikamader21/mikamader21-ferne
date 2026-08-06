@@ -65,7 +65,7 @@ public enum ScreenshotFixtures {
                 startDate: at(23, 45),
                 priority: .esencial,
                 status: .programada
-            ),
+            )
         ]
     }
 

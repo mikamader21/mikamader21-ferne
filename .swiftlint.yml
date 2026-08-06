@@ -54,7 +54,11 @@ custom_rules:
     severity: warning
   no_hardcoded_hex:
     name: "Sin colores hex sueltos"
-    regex: 'Color\(hex:\s*"#'
+    regex: 'Color\(hex:'
+    # FerneColor.swift es el ÚNICO sitio donde deben declararse los tokens: es el
+    # archivo que la regla existe para proteger, no para vigilar. Se excluye solo
+    # él; la regla sigue activa en todo el resto del proyecto.
+    excluded: '.*/DesignSystem/Tokens/FerneColor\.swift'
     message: "Los colores deben venir de FerneColor / design tokens, no hex sueltos."
     severity: error
   no_pure_black:

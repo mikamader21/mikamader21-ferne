@@ -30,7 +30,7 @@ final class ScoreEngineTests: XCTestCase {
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 13), status: .completada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 20), status: .completada),
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 20), status: .completada)
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -45,7 +45,7 @@ final class ScoreEngineTests: XCTestCase {
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .reprogramada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .reprogramada),
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .reprogramada)
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -60,7 +60,7 @@ final class ScoreEngineTests: XCTestCase {
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .cancelada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .pendiente),
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .pendiente)
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -76,7 +76,7 @@ final class ScoreEngineTests: XCTestCase {
 
         let activities = [
             TestSupport.activity(title: "Dormir", category: .dormir, at: lateNight, status: .completada),
-            TestSupport.activity(title: "Nota", category: .nota, at: afterMidnight, status: .pendiente),
+            TestSupport.activity(title: "Nota", category: .nota, at: afterMidnight, status: .pendiente)
         ]
 
         let day6 = engine.dailyScore(for: TestSupport.date(2026, 8, 6), activities: activities)
@@ -111,7 +111,7 @@ final class ScoreEngineTests: XCTestCase {
         // Semana del lunes 3 al domingo 9 de agosto de 2026.
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 3, 8), status: .completada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 4, 8), status: .completada),
+            TestSupport.activity(at: TestSupport.date(2026, 8, 4, 8), status: .completada)
         ]
         let weekly = engine.weeklyScore(weekContaining: TestSupport.date(2026, 8, 5), activities: activities)
 
@@ -130,7 +130,7 @@ final class ScoreEngineTests: XCTestCase {
         let day = TestSupport.date(2026, 8, 6)
         var activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .pendiente),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .pendiente),
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .pendiente)
         ]
         XCTAssertEqual(engine.dailyScore(for: day, activities: activities).displayPercentage, 0)
 

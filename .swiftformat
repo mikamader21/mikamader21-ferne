@@ -22,7 +22,10 @@
 --stripunusedargs closure-only
 --self remove
 --importgrouping testable-bottom
---commas always
+# `inline`, no `always`: SwiftLint aplica `trailing_comma` y una coma final que
+# SwiftFormat añade es exactamente la que SwiftLint marca como error. Con `always`
+# las dos herramientas se pelean en cada ejecución.
+--commas inline
 
 --exclude .build,DerivedData,FERNE.xcodeproj,gallery,artifacts
 

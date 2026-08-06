@@ -69,7 +69,7 @@ public enum FerneColor {
 
     /// Los colores atmosféricos, para auditoría y pruebas.
     public static let atmospheric: [Color] = [
-        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum, luminousWhite,
+        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum, luminousWhite
     ]
 
     // MARK: - Rojo reservado
@@ -114,20 +114,40 @@ public enum FerneColor {
     /// de acción). En las tres referencias, "Buenos días, Fer", "82" y "FERNÉ" usan este.
     public static let brandMagenta = Color(hex: 0xAE275D)
 
+    /// Color de una categoría. Los mismos valores de siempre, agrupados por el
+    /// momento del día al que pertenece cada categoría.
     public static func categoryTint(_ category: ActivityCategory) -> Color {
+        rhythmTint(category) ?? activityTint(category) ?? personalTint(category)
+    }
+
+    /// Categorías que marcan el ritmo del día: despertar, comer, dormir.
+    private static func rhythmTint(_ category: ActivityCategory) -> Color? {
         switch category {
         case .despertar: sunGold
         case .comida: peachCoral
+        case .dormir: deepPlum
+        default: nil
+        }
+    }
+
+    /// Categorías de actividad programada.
+    private static func activityTint(_ category: ActivityCategory) -> Color? {
+        switch category {
         case .gym: fernePink
         case .trabajo: secondaryPlum
         case .live: softPink
         case .lectura: cloudPink
         case .pago: attentionAmber
+        default: nil
+        }
+    }
+
+    /// Rutinas, eventos, notas y espacio personal.
+    private static func personalTint(_ category: ActivityCategory) -> Color {
+        switch category {
         case .rutina: softPink
-        case .evento: fernePink
         case .nota: roseGray
-        case .dormir: deepPlum
-        case .personal: fernePink
+        default: fernePink
         }
     }
 

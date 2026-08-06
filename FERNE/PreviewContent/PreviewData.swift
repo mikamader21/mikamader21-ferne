@@ -66,7 +66,7 @@ public enum PreviewData {
                 startDate: at(23, 45),
                 priority: .esencial,
                 status: .programada
-            ),
+            )
         ]
     }
 
@@ -93,7 +93,7 @@ public enum PreviewData {
                     category: .lectura,
                     startDate: at(21, 0, dayOffset: dayOffset),
                     status: .completada
-                ),
+                )
             ])
         }
         return result

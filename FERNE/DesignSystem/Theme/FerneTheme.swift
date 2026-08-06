@@ -55,7 +55,7 @@ public struct FerneTheme: Equatable, Sendable {
             FerneColor.cloudPink,
             FerneColor.skyCyan.opacity(0.18), // atmosférico: cielo alto
             FerneColor.peachCoral.opacity(0.55),
-            FerneColor.ivoryRose,
+            FerneColor.ivoryRose
         ],
         celestialCore: FerneColor.sunGold,
         celestialHalo: FerneColor.peachCoral,
@@ -75,7 +75,7 @@ public struct FerneTheme: Equatable, Sendable {
             FerneColor.dawnPeach.opacity(0.5),
             FerneColor.peachCoral.opacity(0.45),
             FerneColor.cloudPink.opacity(0.7),
-            FerneColor.ivoryRose,
+            FerneColor.ivoryRose
         ],
         celestialCore: FerneColor.sunGold,
         celestialHalo: FerneColor.sunGold,
@@ -106,7 +106,7 @@ public struct FerneTheme: Equatable, Sendable {
             FerneColor.softIndigo.opacity(0.45), // atmosférico: índigo suave
             FerneColor.nightPlum, // ciruela nocturno de transición
             FerneColor.lavender.opacity(0.7), // atmosférico: lavanda
-            FerneColor.softPink.opacity(0.55), // el rosado nunca desaparece
+            FerneColor.softPink.opacity(0.55) // el rosado nunca desaparece
         ],
         celestialCore: FerneColor.luminousWhite,
         celestialHalo: FerneColor.sunGold, // halo cálido: la luna de FERNÉ no es fría

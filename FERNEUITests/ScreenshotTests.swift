@@ -79,7 +79,7 @@ final class ScreenshotTests: XCTestCase {
             ("Inicio", "screen.home"),
             ("Progreso", "screen.progress"),
             ("Destellos", "screen.sparks"),
-            ("Perfil", "screen.profile"),
+            ("Perfil", "screen.profile")
         ]
         for phase in ["manana", "noche"] {
             let app = launch(phase: phase)
@@ -108,7 +108,7 @@ final class ScreenshotTests: XCTestCase {
             "-FERNEPhase", phase,
             "-FERNEFixture", fixture,
             "-FERNESkipSplash", skipSplash ? "1" : "0",
-            "-FERNEReduceMotion", reduceMotion ? "1" : "0",
+            "-FERNEReduceMotion", reduceMotion ? "1" : "0"
         ]
         if let contentSize {
             // Argumento estándar de UIKit: cambia el tamaño de texto sin tocar Ajustes.

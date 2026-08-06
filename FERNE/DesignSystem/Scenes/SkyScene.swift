@@ -135,11 +135,21 @@ struct StarField: View {
     let opacity: Double
     let animate: Bool
 
+    /// Posición y tamaño de una estrella, en fracción del lienzo.
+    private struct Star {
+        let x: Double
+        let y: Double
+        let size: Double
+    }
+
     /// Posiciones deterministas: la escena debe verse igual en cada captura de QA visual.
-    private static let positions: [(x: Double, y: Double, size: Double)] = [
-        (0.12, 0.10, 2.4), (0.28, 0.06, 1.8), (0.44, 0.15, 2.0), (0.58, 0.05, 1.6),
-        (0.86, 0.12, 2.2), (0.20, 0.22, 1.7), (0.66, 0.24, 2.1), (0.92, 0.28, 1.5),
-        (0.08, 0.34, 1.9), (0.38, 0.31, 1.6), (0.74, 0.36, 2.3), (0.52, 0.40, 1.4),
+    private static let positions: [Star] = [
+        Star(x: 0.12, y: 0.10, size: 2.4), Star(x: 0.28, y: 0.06, size: 1.8),
+        Star(x: 0.44, y: 0.15, size: 2.0), Star(x: 0.58, y: 0.05, size: 1.6),
+        Star(x: 0.86, y: 0.12, size: 2.2), Star(x: 0.20, y: 0.22, size: 1.7),
+        Star(x: 0.66, y: 0.24, size: 2.1), Star(x: 0.92, y: 0.28, size: 1.5),
+        Star(x: 0.08, y: 0.34, size: 1.9), Star(x: 0.38, y: 0.31, size: 1.6),
+        Star(x: 0.74, y: 0.36, size: 2.3), Star(x: 0.52, y: 0.40, size: 1.4)
     ]
 
     var body: some View {
