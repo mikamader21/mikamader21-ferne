@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mi progreso</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-surface-variant": "#574146",
+                      "on-primary-fixed-variant": "#8d0545",
+                      "surface": "#fff8f7",
+                      "on-tertiary-fixed": "#271900",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed": "#3a0a08",
+                      "surface-container": "#f3eceb",
+                      "surface-variant": "#e8e1e0",
+                      "secondary": "#8e4b45",
+                      "surface-container-low": "#f9f2f1",
+                      "on-surface": "#1d1b1b",
+                      "on-secondary-container": "#793b35",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#ffdea7",
+                      "secondary-fixed": "#ffdad6",
+                      "primary-container": "#f45f92",
+                      "on-primary-container": "#5e002b",
+                      "on-error": "#ffffff",
+                      "primary-fixed": "#ffd9e1",
+                      "outline-variant": "#debfc5",
+                      "surface-container-high": "#ede7e6",
+                      "primary": "#ae275d",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#f6efee",
+                      "on-tertiary-fixed-variant": "#5e4200",
+                      "background": "#fff8f7",
+                      "on-secondary-fixed-variant": "#71352f",
+                      "primary-fixed-dim": "#ffb1c5",
+                      "surface-bright": "#fff8f7",
+                      "tertiary-container": "#b58e43",
+                      "outline": "#8a7076",
+                      "tertiary-fixed-dim": "#ecc070",
+                      "on-background": "#1d1b1b",
+                      "on-primary-fixed": "#3f001b",
+                      "secondary-fixed-dim": "#ffb4ab",
+                      "on-tertiary": "#ffffff",
+                      "secondary-container": "#fda89f",
+                      "inverse-surface": "#33302f",
+                      "surface-dim": "#dfd9d8",
+                      "on-tertiary-container": "#3d2900",
+                      "on-primary": "#ffffff",
+                      "tertiary": "#7a5911",
+                      "surface-container-highest": "#e8e1e0",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-tint": "#ae275d",
+                      "inverse-primary": "#ffb1c5",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1280px",
+                      "margin-mobile": "20px",
+                      "unit": "8px",
+                      "gutter": "24px",
+                      "margin-desktop": "64px"
+              },
+              "fontFamily": {
+                      "display-lg-mobile": [
+                              "Libre Caslon Text"
+                      ],
+                      "display-lg": [
+                              "Libre Caslon Text"
+                      ],
+                      "headline-md": [
+                              "Libre Caslon Text"
+                      ],
+                      "body-md": [
+                              "Hanken Grotesk"
+                      ],
+                      "label-caps": [
+                              "Hanken Grotesk"
+                      ],
+                      "body-lg": [
+                              "Hanken Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "display-lg-mobile": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "display-lg": [
+                              "64px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=Hanken+Grotesk:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .glass-card {
+            background: rgba(255, 248, 247, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(174, 39, 93, 0.05);
+        }
+        
+        .bg-mesh-gradient {
+            background-color: #fff8f7;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(255, 217, 225, 0.4) 0px, transparent 50%),
+                radial-gradient(at 90% 10%, rgba(255, 222, 167, 0.4) 0px, transparent 50%),
+                radial-gradient(at 50% 90%, rgba(244, 95, 146, 0.2) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .nube {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: float 25s infinite alternate ease-in-out;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+            50% { transform: translate(30px, -50px) scale(1.1); opacity: 0.5; }
+            100% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
+        }
+
+        .progress-circle-anim {
+            stroke-dasharray: 251.2;
+            stroke-dashoffset: 251.2;
+            animation: fillCircle 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes fillCircle {
+            to { stroke-dashoffset: 45.2; } /* 82% of 251.2 */
+        }
+        
+        .bar-anim {
+            transform-origin: bottom;
+            animation: growBar 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        @keyframes growBar {
+            from { transform: scaleY(0); }
+            to { transform: scaleY(1); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-mesh-gradient text-on-surface min-h-screen pb-32">
+<!-- Background Nubes -->
+<div class="nube bg-primary-fixed-dim w-96 h-96 top-[-10%] left-[-10%]"></div>
+<div class="nube bg-tertiary-fixed w-[30rem] h-[30rem] bottom-[10%] right-[-10%] animation-delay-2000"></div>
+<!-- TopAppBar -->
+<header class="relative w-full px-margin-mobile flex flex-col justify-end docked full-width top-0 h-[176px] md:h-[221px] pb-8 no-border bg-gradient-to-b from-transparent to-surface/20 flat no shadows Transition-all duration-700 ease-in-out md:px-margin-desktop">
+<div class="flex items-end justify-between w-full max-w-container-max mx-auto">
+<button class="text-primary dark:text-primary-fixed-dim hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-3xl">menu</span>
+</button>
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary dark:text-primary-fixed-dim tracking-tighter">FERNÉ</h1>
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-surface/50 shadow-sm hover:opacity-80 transition-opacity cursor-pointer">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A close up, high fashion portrait of a young professional woman with a calm expression, soft natural makeup, and elegant minimalist jewelry. Warm, golden hour lighting catches her features. Cinematic style, editorial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp0lqeujtlFprBLNt0d-4U7OLj_l2PsD2etthnCTS8mAAdZ_jVEG4Jv_-CWl3WX_P-L3NgGhrHFw_OSAm1CeSsXYh_hhEQLMnLHQmCdIlxLlMs_3VJHRSQs2GWBvgqrJUw4-vsIieSi_f8X_5nIIDcwkT3dqn6e51oBmcMbZ_w5aQnTby_7by0QZvTItcijjy0sodSEaoXoj11AotRIa97i9H3Dop0Sf86IHl_maQzhATr6K-i4XU"/>
+</div>
+</div>
+</header>
+<main class="w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop flex flex-col gap-gutter">
+<!-- Header Text -->
+<section class="mt-4 mb-2">
+<h2 class="font-headline-md text-headline-md text-on-surface text-center">Así va tu semana, Fer</h2>
+</section>
+<!-- Main Dashboard Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Weekly Score (Large Circle) -->
+<div class="glass-card rounded-xl p-8 flex flex-col items-center justify-center relative md:col-span-5 md:row-span-2 overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-primary-fixed-dim/20 to-transparent opacity-50"></div>
+<div class="relative w-48 h-48 flex items-center justify-center mb-6">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<!-- Background Circle -->
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="40" stroke="rgba(255, 218, 214, 0.5)" stroke-width="8"></circle>
+<!-- Progress Circle -->
+<circle class="progress-circle-anim shadow-sm" cx="50" cy="50" fill="none" r="40" stroke="url(#gradient)" stroke-linecap="round" stroke-width="8"></circle>
+<defs>
+<lineargradient id="gradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ae275d"></stop>
+<stop offset="100%" stop-color="#f45f92"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute flex flex-col items-center justify-center">
+<span class="font-display-lg-mobile text-display-lg-mobile text-primary leading-none">82</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant mt-1">PUNTOS</span>
+</div>
+</div>
+<div class="text-center relative z-10">
+<div class="flex items-center justify-center gap-2 text-primary font-body-lg text-body-lg">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<span>Vas muy bien</span>
+</div>
+</div>
+</div>
+<!-- Summary Stats -->
+<div class="glass-card rounded-xl p-6 md:col-span-7 flex flex-col justify-center">
+<div class="grid grid-cols-3 gap-4">
+<div class="flex flex-col items-center text-center">
+<div class="w-12 h-12 rounded-full bg-primary-container/30 flex items-center justify-center mb-3 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<span class="font-display-lg-mobile text-2xl text-on-surface">24</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant mt-1">COMPLETADAS</span>
+</div>
+<div class="flex flex-col items-center text-center">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed/30 flex items-center justify-center mb-3 text-tertiary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+<span class="font-display-lg-mobile text-2xl text-on-surface">3</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant mt-1">PENDIENTES</span>
+</div>
+<div class="flex flex-col items-center text-center">
+<div class="w-12 h-12 rounded-full bg-surface-variant/50 flex items-center justify-center mb-3 text-on-surface-variant">
+<span class="material-symbols-outlined">update</span>
+</div>
+<span class="font-display-lg-mobile text-2xl text-on-surface">1</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant mt-1">REPROGRAMADAS</span>
+</div>
+</div>
+</div>
+<!-- 7-Day Bar Chart -->
+<div class="glass-card rounded-xl p-6 md:col-span-7">
+<div class="flex items-end justify-between h-40 gap-2 px-2 pb-6 border-b border-surface-variant relative">
+<!-- Mon -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[60%] bar-anim relative overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary h-[80%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">L</span>
+</div>
+<!-- Tue -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[85%] bar-anim relative overflow-hidden" style="animation-delay: 0.1s;">
+<div class="absolute bottom-0 w-full bg-primary h-[90%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">M</span>
+</div>
+<!-- Wed -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[70%] bar-anim relative overflow-hidden" style="animation-delay: 0.2s;">
+<div class="absolute bottom-0 w-full bg-primary h-[75%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">M</span>
+</div>
+<!-- Thu -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[95%] bar-anim relative overflow-hidden" style="animation-delay: 0.3s;">
+<div class="absolute bottom-0 w-full bg-primary h-[95%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">J</span>
+</div>
+<!-- Fri -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[50%] bar-anim relative overflow-hidden" style="animation-delay: 0.4s;">
+<div class="absolute bottom-0 w-full bg-primary h-[60%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">V</span>
+</div>
+<!-- Sat -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-primary-fixed-dim/40 rounded-t-sm h-[40%] bar-anim relative overflow-hidden" style="animation-delay: 0.5s;">
+<div class="absolute bottom-0 w-full bg-primary h-[50%] opacity-80"></div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6">S</span>
+</div>
+<!-- Sun -->
+<div class="flex flex-col items-center w-full gap-2 relative group h-full justify-end">
+<div class="w-full max-w-[24px] bg-surface-variant rounded-t-sm h-[10%] bar-anim relative overflow-hidden" style="animation-delay: 0.6s;">
+<!-- empty -->
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant absolute -bottom-6 opacity-50">D</span>
+</div>
+</div>
+</div>
+<!-- Insights -->
+<div class="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-gutter mt-4">
+<div class="glass-card rounded-xl p-5 flex items-start gap-4">
+<div class="p-2 rounded-full bg-tertiary-fixed text-on-tertiary-fixed shadow-[0_4px_15px_rgba(255,222,167,0.4)]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-1">LO ESTÁS HACIENDO MUY BIEN EN:</h3>
+<p class="font-body-lg text-body-lg text-on-surface">Comidas y lectura</p>
+</div>
+</div>
+<div class="glass-card rounded-xl p-5 flex items-start gap-4">
+<div class="p-2 rounded-full bg-secondary-container text-on-secondary-container shadow-[0_4px_15px_rgba(253,168,159,0.4)]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bedtime</span>
+</div>
+<div>
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-1">PODEMOS MEJORAR:</h3>
+<p class="font-body-md text-body-md text-on-surface">Prepararte para dormir un poco antes</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="mt-8 mb-12 flex justify-center w-full">
+<button class="bg-gradient-to-r from-tertiary-fixed-dim to-primary text-on-primary font-body-lg text-body-lg px-8 py-4 rounded-full shadow-[0_8px_25px_rgba(174,39,93,0.3)] hover:shadow-[0_12px_30px_rgba(174,39,93,0.4)] transition-all duration-300 hover:-translate-y-1 w-full md:w-auto min-w-[280px]">
+                Organizar mañana
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/60 dark:bg-surface-dim/60 backdrop-blur-xl border-t border-white/20 shadow-[0_-4px_20px_rgba(174,39,93,0.1)] fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-6 pb-safe">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:scale-110 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">auto_awesome</span>
+<span class="font-label-caps text-label-caps">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/20 rounded-xl px-4 py-1 hover:scale-110 transition-transform duration-300 Active: scale-95 transition-all cubic-bezier(0.34, 1.56, 0.64, 1)" href="#">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">donut_large</span>
+<span class="font-label-caps text-label-caps">Progreso</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:scale-110 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">auto_fix_high</span>
+<span class="font-label-caps text-label-caps">Destellos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-4 py-1 hover:scale-110 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">person</span>
+<span class="font-label-caps text-label-caps">Perfil</span>
+</a>
+</nav>
+</body></html>

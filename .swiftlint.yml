@@ -1,0 +1,64 @@
+# SwiftLint — FERNÉ
+included:
+  - FERNE
+  - FERNETests
+  - FERNEUITests
+excluded:
+  - FERNE/PreviewContent
+  - .build
+  - DerivedData
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - last_where
+  - modifier_order
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+
+type_body_length:
+  warning: 300
+  error: 450
+
+file_length:
+  warning: 450
+  error: 700
+
+function_body_length:
+  warning: 60
+  error: 100
+
+identifier_name:
+  min_length: 2
+  excluded: [id, x, y, r, g, b, a, dx, dy]
+
+force_cast: error
+force_try: error
+force_unwrapping: warning
+
+custom_rules:
+  no_print:
+    name: "Sin print() en producción"
+    regex: '(?<!\/\/\s)\bprint\('
+    match_kinds: [identifier]
+    message: "Usa FerneLog en lugar de print(). Nunca registres datos personales."
+    severity: warning
+  no_hardcoded_hex:
+    name: "Sin colores hex sueltos"
+    regex: 'Color\(hex:\s*"#'
+    message: "Los colores deben venir de FerneColor / design tokens, no hex sueltos."
+    severity: error
+  no_pure_black:
+    name: "Prohibido negro puro"
+    regex: 'Color\.black(?!\.opacity)'
+    message: "FERNÉ nunca usa negro puro como fondo. Usa FerneColor.deepPlum o la escena nocturna."
+    severity: warning

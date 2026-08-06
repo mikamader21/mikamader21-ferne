@@ -1,0 +1,91 @@
+# ============================================================================
+# FERNÉ — Política de finales de línea
+#
+# El proyecto se edita en Windows y se compila en un runner macOS. Sin esta
+# política, Git convierte LF → CRLF al hacer checkout en Windows, y eso rompe:
+#
+#   · Los scripts Bash: el shell interpreta el \r final y falla con errores
+#     ilegibles del tipo "bad interpreter: /usr/bin/env bash^M".
+#   · El workflow de GitHub Actions: los bloques `run:` heredan el \r.
+#   · Los checksums sha256: el mismo contenido con distinto final de línea
+#     produce un hash distinto, y `verify-spec-integrity.sh` bloquearía
+#     el proyecto por una divergencia que no existe.
+#
+# Regla general: todo texto viaja en LF en el repositorio. Solo los archivos
+# que Windows ejecuta directamente (.bat, .ps1) se materializan en CRLF.
+# ============================================================================
+
+# Normalización automática por defecto
+* text=auto
+
+# ---------------------------------------------------------------------------
+# Texto que SIEMPRE debe ser LF
+# ---------------------------------------------------------------------------
+*.sh            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.swift         text eol=lf
+*.md            text eol=lf
+*.json          text eol=lf
+*.plist         text eol=lf
+*.entitlements  text eol=lf
+*.py            text eol=lf
+*.txt           text eol=lf
+*.pbxproj       text eol=lf
+*.xcconfig      text eol=lf
+
+Makefile        text eol=lf
+.spec-integrity text eol=lf
+.swiftformat    text eol=lf
+.swiftlint.yml  text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# ---------------------------------------------------------------------------
+# Ejecutables de Windows: CRLF obligatorio
+#
+# cmd.exe puede tolerar LF, pero PowerShell y algunos intérpretes fallan de
+# forma sutil. Estos archivos solo se ejecutan en Windows, así que CRLF es lo
+# correcto para ellos.
+# ---------------------------------------------------------------------------
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# ---------------------------------------------------------------------------
+# Binarios: Git no debe tocarlos NUNCA
+#
+# Una sola conversión de finales de línea corrompe irreversiblemente una
+# imagen, una fuente o un audio.
+# ---------------------------------------------------------------------------
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.webp          binary
+*.pdf           binary
+*.ttf           binary
+*.otf           binary
+*.woff          binary
+*.woff2         binary
+*.caf           binary
+*.aiff          binary
+*.aif           binary
+*.wav           binary
+*.mp3           binary
+*.m4a           binary
+*.zip           binary
+*.ipa           binary
+*.xcarchive     binary
+*.p12           binary
+*.p8            binary
+*.mobileprovision binary
+
+# ---------------------------------------------------------------------------
+# Diff más legible en GitHub
+# ---------------------------------------------------------------------------
+*.swift         diff=swift
+*.md            diff=markdown
+
+# Las referencias visuales no se muestran como diff de texto
+docs/design-references/**/*.png binary

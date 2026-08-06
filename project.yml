@@ -1,0 +1,121 @@
+# FERNÉ — definición del proyecto Xcode (XcodeGen)
+# Regenerar con:  xcodegen generate
+name: FERNE
+options:
+  bundleIdPrefix: com.ferne
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: es
+  createIntermediateGroups: true
+  groupSortPosition: top
+  xcodeVersion: "16.0"
+
+attributes:
+  ORGANIZATIONNAME: FERNÉ
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    TARGETED_DEVICE_FAMILY: "1"          # solo iPhone
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO   # se endurece en Fase 8
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""                 # rellenar localmente, nunca versionar un Team ID ajeno
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  FERNE:
+    type: application
+    platform: iOS
+    sources:
+      # PreviewContent se compila como código: contiene los fixtures que alimentan
+      # las previews y las capturas de QA visual. En la Fase 1, cuando las vistas
+      # pasen a leer de SwiftData, su contenido se envolverá en `#if DEBUG`.
+      - path: FERNE
+    info:
+      path: FERNE/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: FERNÉ
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Light
+        ITSAppUsesNonExemptEncryption: false
+        NSFaceIDUsageDescription: "FERNÉ puede pedir Face ID para proteger tus notas y tu día."
+        NSCalendarsFullAccessUsageDescription: "Para mostrar tus eventos junto a tu agenda de FERNÉ. Es opcional."
+        NSUserNotificationsUsageDescription: "Para avisarte de tus recordatorios, comidas, gym y descanso."
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.ferne.app.refresh
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ferne.app
+        DEVELOPMENT_ASSET_PATHS: "FERNE/PreviewContent"
+        ENABLE_PREVIEWS: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+    entitlements:
+      path: FERNE/Resources/FERNE.entitlements
+      properties:
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.ferne.app
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.alarmkit: true
+        aps-environment: development
+    preBuildScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          if which swiftlint > /dev/null; then
+            swiftlint --quiet
+          else
+            echo "warning: SwiftLint no instalado — brew install swiftlint"
+          fi
+
+  FERNETests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [FERNETests]
+    dependencies:
+      - target: FERNE
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+  FERNEUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [FERNEUITests]
+    dependencies:
+      - target: FERNE
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  FERNE:
+    build:
+      targets:
+        FERNE: all
+        FERNETests: [test]
+        FERNEUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - FERNETests
+        - FERNEUITests
+    archive:
+      config: Release

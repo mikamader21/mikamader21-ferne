@@ -1,0 +1,66 @@
+# Xcode
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# XcodeGen output (project is generated from project.yml)
+FERNE.xcodeproj/
+
+# SwiftPM
+.build/
+.swiftpm/
+Packages/
+
+# Secrets — NUNCA versionar
+*.xcconfig.local
+Secrets.xcconfig
+.env
+.env.*
+.envrc
+*.p12
+*.pfx
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.certSigningRequest
+*.p8
+AuthKey_*.p8
+*.keystore
+*.jks
+*.pem
+*.key
+!Resources/**/*.key
+ExportOptions.plist
+fastlane/report.xml
+.netrc
+credentials.json
+service-account*.json
+
+# macOS
+.DS_Store
+
+# Tooling
+Tools/bin/
+.reports/
+.build-logic/
+
+# Artefactos de build y CI
+artifacts/
+*.xcresult/
+*.xcarchive/
+build/DerivedData/
+
+# Carpeta temporal de sesión (nunca debe entrar)
+outputs/
+UBICACION-DEL-PROYECTO.txt
+
+# Galería generada localmente (contiene copias de referencias y capturas)
+gallery/

@@ -1,0 +1,18 @@
+# Integridad de los documentos maestros de FERNÉ
+#
+# Este archivo registra el checksum aprobado de la especificación. Lo lee
+# Scripts/verify-spec-integrity.sh. NO se edita a mano salvo que exista una
+# decisión registrada en docs/DECISIONS.md que justifique el cambio.
+#
+# Formato: clave = valor
+
+# Original congelado. Es la autoridad. Si cambia, algo va muy mal.
+frozen_sha256 = 8c3724a97c81d6c0619b7f0df023c6ddfc90ffd47c65826b8db5a87051cc5856
+
+# Copia operativa aprobada. Debe coincidir con la anterior mientras no haya
+# una revisión de la especificación aprobada por Mika.
+working_sha256 = 8c3724a97c81d6c0619b7f0df023c6ddfc90ffd47c65826b8db5a87051cc5856
+
+# Última decisión que autorizó un cambio en la copia operativa.
+# "ninguna" = la copia debe ser idéntica al original.
+authorized_by = ninguna

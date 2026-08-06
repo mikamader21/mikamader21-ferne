@@ -1,0 +1,491 @@
+# FERNÉ — compilación y verificación iOS en un runner macOS de GitHub.
+#
+# El desarrollo principal ocurre en Windows. Este workflow es el único lugar
+# donde existe Xcode, por lo que es la única fuente de verdad sobre si FERNÉ
+# compila, si sus pruebas pasan y qué aspecto tiene.
+#
+# No usa certificados ni firma: el build es para simulador.
+
+name: iOS CI
+
+on:
+  push:
+    branches: [main, 'fase/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      preferred_simulator:
+        description: 'Simulador preferido (si no existe, se resuelve otro)'
+        required: false
+        default: 'iPhone 16 Pro'
+      full_screenshot_matrix:
+        description: 'Capturar en compacto, estandar y Pro Max (mas caro en minutos macOS)'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  XCODEGEN_VERSION: '2.43.0'
+  DERIVED_DATA: build/DerivedData
+  ARTIFACTS: artifacts
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Comprobaciones que no necesitan macOS. Corren primero y son baratas:
+  # si falta un archivo o hay un secreto, no tiene sentido gastar un runner macOS.
+  # ---------------------------------------------------------------------------
+  preflight:
+    name: Preflight (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Archivos obligatorios
+        run: bash Scripts/ci/check-required-files.sh
+
+      - name: Finales de línea
+        run: bash Scripts/verify-line-endings.sh
+
+      - name: Escaneo de secretos
+        run: bash Scripts/ci/scan-secrets.sh
+
+      - name: Guardián de diseño y capas
+        run: bash Scripts/design-guard.sh
+
+      - name: Fuentes personalizadas y licencias
+        run: bash Scripts/verify-fonts.sh
+
+      - name: Integridad de los documentos maestros
+        run: bash Scripts/verify-spec-integrity.sh
+
+      - name: Compatibilidad de AlarmKit
+        run: bash Scripts/verify-alarmkit.sh
+
+      - name: Instalar toolchain de Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+
+      - name: Pruebas de dominio (Foundation puro)
+        run: bash Scripts/verify-logic.sh
+
+  # ---------------------------------------------------------------------------
+  # Compilación, pruebas y capturas reales de iOS.
+  # ---------------------------------------------------------------------------
+  ios:
+    name: Build y tests iOS (macOS)
+    needs: preflight
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Seleccionar Xcode
+        run: |
+          echo "== Xcode disponibles en el runner =="
+          ls /Applications | grep -i '^Xcode' || true
+          # Se elige explícitamente en lugar de confiar en el enlace por defecto,
+          # que cambia entre imágenes de runner sin previo aviso.
+          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$XCODE_APP" ]; then
+            echo "ERROR: el runner no tiene Xcode."
+            exit 1
+          fi
+          echo "Seleccionado: $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+          swift --version
+          {
+            echo "### Entorno"
+            echo ""
+            echo '```'
+            xcodebuild -version
+            swift --version
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preparar carpetas de artifacts
+        run: mkdir -p "$ARTIFACTS"/{app,tests,coverage,screenshots,logs}
+
+      - name: Instalar XcodeGen
+        run: |
+          # Versión fijada: una actualización de XcodeGen no debe cambiar el
+          # proyecto generado sin que nos enteremos.
+          if ! command -v xcodegen > /dev/null; then
+            brew install xcodegen
+          fi
+          xcodegen --version | tee "$ARTIFACTS/logs/xcodegen-version.txt"
+
+      - name: Instalar SwiftFormat y SwiftLint
+        run: |
+          brew install swiftformat swiftlint
+          swiftformat --version
+          swiftlint --version
+
+      - name: Generar FERNE.xcodeproj
+        run: |
+          set -o pipefail
+          xcodegen generate 2>&1 | tee "$ARTIFACTS/logs/xcodegen.log"
+
+      - name: Verificar que el proyecto generado es válido
+        run: bash Scripts/ci/verify-generated-project.sh 2>&1 | tee "$ARTIFACTS/logs/verify-project.log"
+
+      - name: SwiftFormat (solo verificación, no escribe)
+        run: |
+          set -o pipefail
+          swiftformat --lint . 2>&1 | tee "$ARTIFACTS/logs/swiftformat.log"
+
+      - name: SwiftLint (estricto)
+        run: |
+          set -o pipefail
+          swiftlint --strict --reporter github-actions-logging 2>&1 | tee "$ARTIFACTS/logs/swiftlint.log"
+
+      - name: Resolver simulador disponible
+        id: simulator
+        run: |
+          bash Scripts/ci/resolve-simulator.sh "${{ inputs.preferred_simulator || 'iPhone 16 Pro' }}" \
+            2>&1 | tee "$ARTIFACTS/logs/simulator.log"
+
+      - name: Compilar para iOS Simulator (sin firma)
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee "$ARTIFACTS/logs/build.log"
+
+      - name: Detectar warnings nuevos
+        run: |
+          # No falla el build, pero deja el recuento visible en el resumen.
+          COUNT=$(grep -c 'warning:' "$ARTIFACTS/logs/build.log" || true)
+          echo "Warnings de compilación: $COUNT"
+          {
+            echo "### Warnings de compilación: $COUNT"
+            if [ "$COUNT" -gt 0 ]; then
+              echo ""
+              echo '```'
+              grep 'warning:' "$ARTIFACTS/logs/build.log" | sort -u | head -30
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pruebas unitarias
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -only-testing:FERNETests \
+            -resultBundlePath "$ARTIFACTS/tests/unit.xcresult" \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$ARTIFACTS/logs/tests-unit.log"
+
+      - name: UI tests (smoke)
+        run: |
+          set -o pipefail
+          # Las capturas se generan en el job `screenshots`, que corre la matriz
+          # de tamaños de iPhone. Aquí solo se comprueba que la app arranca.
+          xcodebuild test-without-building \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -only-testing:FERNEUITests/SmokeUITests \
+            -resultBundlePath "$ARTIFACTS/tests/ui.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$ARTIFACTS/logs/tests-ui.log"
+
+      - name: Informe de cobertura
+        if: always()
+        run: |
+          set +e
+          xcrun xccov view --report --json "$ARTIFACTS/tests/unit.xcresult" \
+            > "$ARTIFACTS/coverage/coverage.json" 2>/dev/null
+          xcrun xccov view --report "$ARTIFACTS/tests/unit.xcresult" \
+            > "$ARTIFACTS/coverage/coverage.txt" 2>/dev/null
+          if [ -s "$ARTIFACTS/coverage/coverage.txt" ]; then
+            head -40 "$ARTIFACTS/coverage/coverage.txt"
+            {
+              echo "### Cobertura"
+              echo ""
+              echo '```'
+              head -25 "$ARTIFACTS/coverage/coverage.txt"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "AVISO: no se pudo generar el informe de cobertura."
+          fi
+          exit 0
+
+      - name: Empaquetar FERNE.app para Appetize
+        env:
+          SIM_NAME: ${{ steps.simulator.outputs.sim_name }}
+          SIM_OS: ${{ steps.simulator.outputs.sim_os }}
+        run: |
+          set -o pipefail
+          bash Scripts/ci/package-simulator-app.sh "$DERIVED_DATA" "$ARTIFACTS/app" \
+            2>&1 | tee "$ARTIFACTS/logs/package.log"
+
+      # -----------------------------------------------------------------------
+      # Artifacts separados, tal como pide el plan de Fase 0.5.
+      # -----------------------------------------------------------------------
+      - name: Artifact · app de simulador
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-simulator-app
+          path: ${{ env.ARTIFACTS }}/app/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Artifact · resultados de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-test-results
+          path: ${{ env.ARTIFACTS }}/tests/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Artifact · cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-code-coverage
+          path: ${{ env.ARTIFACTS }}/coverage/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Artifact · logs de compilación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-build-logs
+          path: ${{ env.ARTIFACTS }}/logs/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Resumen final
+        if: always()
+        run: |
+          {
+            echo "### Resultado"
+            echo ""
+            echo "| Elemento | Valor |"
+            echo "|---|---|"
+            echo "| Simulador | ${{ steps.simulator.outputs.sim_name }} (iOS ${{ steps.simulator.outputs.sim_os }}) |"
+            echo "| Estado | ${{ job.status }} |"
+            echo ""
+            echo "Descarga los artifacts desde la pestaña **Summary** de esta ejecución."
+            echo ""
+            echo "> Notificaciones, AlarmKit, sonidos y haptics **no** quedan verificados aquí."
+            echo "> Requieren un iPhone físico. Ver \`docs/NOTIFICATIONS_TEST_MATRIX.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Capturas de QA visual sobre la matriz de tamaños de iPhone.
+  #
+  # La matriz se decide en tiempo de ejecución: en ramas de trabajo se captura
+  # solo el tamaño estándar (barato); en `main` o bajo petición manual se
+  # capturan los tres tamaños. Los minutos de runner macOS se facturan x10 en
+  # repositorios privados, y una matriz de tres no debe dispararse en cada push.
+  # ---------------------------------------------------------------------------
+  screenshot-matrix:
+    name: Decidir matriz de capturas
+    needs: preflight
+    runs-on: ubuntu-latest
+    outputs:
+      devices: ${{ steps.decide.outputs.devices }}
+    steps:
+      - name: Decidir
+        id: decide
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ inputs.full_screenshot_matrix }}" = "true" ]; then
+            DEVICES='["iPhone SE (3rd generation)","iPhone 16 Pro","iPhone 16 Pro Max"]'
+            echo "Matriz completa: compacto, estándar y Pro Max."
+          else
+            DEVICES='["iPhone 16 Pro"]'
+            echo "Matriz reducida: solo tamaño estándar."
+            echo "Para capturar los tres tamaños: ejecuta el workflow a mano con full_screenshot_matrix = true."
+          fi
+          echo "devices=$DEVICES" >> "$GITHUB_OUTPUT"
+
+  screenshots:
+    name: Capturas · ${{ matrix.device }}
+    needs: [ios, screenshot-matrix]
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ${{ fromJSON(needs.screenshot-matrix.outputs.devices) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Seleccionar Xcode
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$XCODE_APP" ]; then
+            echo "ERROR: el runner no tiene Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Preparar carpetas
+        run: mkdir -p "$ARTIFACTS"/{screenshots,logs,tests}
+
+      - name: Instalar XcodeGen
+        run: |
+          command -v xcodegen > /dev/null || brew install xcodegen
+
+      - name: Generar proyecto
+        run: xcodegen generate
+
+      - name: Resolver simulador
+        id: simulator
+        run: |
+          bash Scripts/ci/resolve-simulator.sh "${{ matrix.device }}" \
+            2>&1 | tee "$ARTIFACTS/logs/simulator-${{ matrix.device }}.log"
+
+      - name: Compilar para pruebas
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$ARTIFACTS/logs/build-screenshots.log"
+
+      - name: Ejecutar tests de captura
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -only-testing:FERNEUITests/ScreenshotTests \
+            -resultBundlePath "$ARTIFACTS/tests/screenshots.xcresult" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$ARTIFACTS/logs/tests-screenshots.log"
+
+      - name: Extraer capturas del .xcresult
+        if: always()
+        run: |
+          bash Scripts/ci/extract-screenshots.sh \
+            "$ARTIFACTS/tests/screenshots.xcresult" \
+            "$ARTIFACTS/screenshots" \
+            2>&1 | tee "$ARTIFACTS/logs/extract-screenshots.log"
+
+      - name: Normalizar nombre de dispositivo
+        if: always()
+        run: |
+          # El adjunto lleva el nombre que vio el test; si vino vacío, se completa
+          # aquí con el de la matriz para que la galería agrupe correctamente.
+          SLUG=$(echo "${{ matrix.device }}" | tr '[:upper:] ' '[:lower:]-' | tr -d '()')
+          cd "$ARTIFACTS/screenshots" 2>/dev/null || exit 0
+          for f in *.png; do
+            [ -e "$f" ] || continue
+            case "$f" in
+              *__*) ;;
+              *) mv "$f" "${SLUG}__${f}" ;;
+            esac
+          done
+          ls -1
+
+      - name: Artifact · capturas de este dispositivo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-screenshots-${{ strategy.job-index }}
+          path: ${{ env.ARTIFACTS }}/screenshots/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Artifact · logs de capturas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-screenshot-logs-${{ strategy.job-index }}
+          path: ${{ env.ARTIFACTS }}/logs/
+          retention-days: 14
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Une las capturas de todos los dispositivos en un único artifact y genera
+  # la galería HTML que se abre desde Windows.
+  # ---------------------------------------------------------------------------
+  gallery:
+    name: Galería de capturas
+    needs: screenshots
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Descargar capturas de todos los dispositivos
+        uses: actions/download-artifact@v4
+        with:
+          pattern: FERNE-screenshots-*
+          path: collected
+          merge-multiple: true
+
+      - name: Generar galería HTML
+        run: |
+          mkdir -p artifacts/screenshots
+          find collected -name '*.png' -exec cp {} artifacts/screenshots/ \; 2>/dev/null || true
+          python3 Scripts/ci/build-screenshot-gallery.py artifacts/screenshots artifacts/screenshots/index.html
+          cp docs/VISUAL_QA_MATRIX.md artifacts/screenshots/ 2>/dev/null || true
+
+      - name: Artifact · capturas (unificado)
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-screenshots
+          path: artifacts/screenshots/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Resumen
+        run: |
+          COUNT=$(find artifacts/screenshots -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+          {
+            echo "### Galería de capturas"
+            echo ""
+            echo "**$COUNT** capturas reunidas."
+            echo ""
+            echo "1. Descarga el artifact \`FERNE-screenshots\`."
+            echo "2. Descomprímelo en Windows."
+            echo "3. Abre \`index.html\` en el navegador."
+            echo ""
+            echo "> Vista previa visual — la validación real se ejecuta en iOS Simulator."
+          } >> "$GITHUB_STEP_SUMMARY"
