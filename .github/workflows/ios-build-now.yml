@@ -1,0 +1,134 @@
+# Vía de emergencia: compilar FERNÉ y obtener FERNE.app cuanto antes.
+#
+# No sustituye a `iOS CI`, que sigue siendo la verificación completa. Este
+# workflow hace lo mínimo para llegar al binario: generar el proyecto, compilar
+# y empaquetar. Sin lint, sin pruebas, sin capturas.
+
+name: iOS Build Now
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Compilar y empaquetar FERNE.app
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Seleccionar Xcode
+        run: |
+          # Se fija la misma versión con la que el pipeline principal llegó más
+          # lejos. El Xcode por defecto del runner cambia entre imágenes.
+          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$XCODE_APP" ]; then
+            echo "ERROR: el runner no tiene Xcode."
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Instalar XcodeGen
+        run: |
+          command -v xcodegen > /dev/null || brew install xcodegen
+          xcodegen --version
+
+      - name: Generar FERNE.xcodeproj
+        run: xcodegen generate
+
+      - name: Compilar para iOS Simulator
+        id: build
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          xcodebuild build \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee artifacts/xcodebuild.log
+
+      - name: Primer error de Xcode
+        if: always()
+        run: |
+          # Se ejecuta pase lo que pase: si el build falló, esto es lo único que
+          # hace falta leer para saber por qué.
+          if [ ! -f artifacts/xcodebuild.log ]; then
+            echo "No hay log de xcodebuild." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          ERRORS=$(grep -E "error:" artifacts/xcodebuild.log | grep -v "^warning" | head -10 || true)
+          if [ -n "$ERRORS" ]; then
+            {
+              echo "### Primer error de Xcode"
+              echo ""
+              echo '```'
+              echo "$ERRORS"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "$ERRORS"
+          else
+            echo "### Sin errores de compilación" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Localizar y empaquetar FERNE.app
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find build/DerivedData/Build/Products -name 'FERNE.app' -type d 2>/dev/null | head -1 || true)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: no se encontro FERNE.app tras la compilacion."
+            find build/DerivedData/Build/Products -maxdepth 3 2>/dev/null || true
+            exit 1
+          fi
+          if [ ! -f "$APP_PATH/FERNE" ]; then
+            echo "ERROR: $APP_PATH no contiene el ejecutable 'FERNE'."
+            ls -la "$APP_PATH"
+            exit 1
+          fi
+
+          echo "App encontrada: $APP_PATH"
+          lipo -info "$APP_PATH/FERNE" || true
+
+          mkdir -p artifacts/app
+          # `cd` al directorio padre y `-y` para que el .app quede en la RAIZ del
+          # ZIP y se conserven los symlinks del bundle.
+          ( cd "$(dirname "$APP_PATH")" && zip -qry "$GITHUB_WORKSPACE/artifacts/app/FERNE-simulator.zip" "$(basename "$APP_PATH")" )
+
+          echo "Contenido del ZIP:"
+          unzip -l artifacts/app/FERNE-simulator.zip | head -15
+
+          {
+            echo "### FERNE.app generada"
+            echo ""
+            echo "Sube \`FERNE-simulator.zip\` a Appetize.io (plataforma iOS, build de simulador)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Artifact · FERNE.app
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-app-now
+          path: artifacts/app/FERNE-simulator.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Artifact · log de Xcode
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-build-now-log
+          path: artifacts/xcodebuild.log
+          retention-days: 14
+          if-no-files-found: warn
