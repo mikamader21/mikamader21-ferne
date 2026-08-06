@@ -16,8 +16,13 @@ public struct SystemDayPhaseProvider: DayPhaseProviding {
         self.calendar = calendar
     }
 
-    public var now: Date { Date() }
-    public var currentPhase: DayPhase { DayPhase.from(now, calendar: calendar) }
+    public var now: Date {
+        Date()
+    }
+
+    public var currentPhase: DayPhase {
+        DayPhase.from(now, calendar: calendar)
+    }
 }
 
 /// Provider fijo para previews, tests y capturas de QA visual (día/noche).
@@ -30,6 +35,11 @@ public struct FixedDayPhaseProvider: DayPhaseProviding {
         self.date = date
     }
 
-    public var now: Date { date }
-    public var currentPhase: DayPhase { phase }
+    public var now: Date {
+        date
+    }
+
+    public var currentPhase: DayPhase {
+        phase
+    }
 }

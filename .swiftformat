@@ -1,12 +1,58 @@
+# ============================================================================
+# FERNÉ — configuración de SwiftFormat
+#
+# VERSIÓN FIJADA: 0.62.1
+# Debe coincidir con SWIFTFORMAT_VERSION de .github/workflows/ios-ci.yml.
+# Si difieren, el mismo código pasa en local y falla en CI, o al revés.
+# ============================================================================
+
 --swiftversion 6.0
+
+# ---------------------------------------------------------------------------
+# Formato
+# ---------------------------------------------------------------------------
 --indent 4
 --maxwidth 140
 --wraparguments before-first
 --wrapparameters before-first
 --wrapcollections before-first
+--wrapconditions preserve
 --closingparen balanced
 --trimwhitespace always
 --stripunusedargs closure-only
 --self remove
 --importgrouping testable-bottom
---exclude .build,DerivedData,FERNE.xcodeproj
+--commas always
+
+--exclude .build,DerivedData,FERNE.xcodeproj,gallery,artifacts
+
+# ---------------------------------------------------------------------------
+# Reglas DESACTIVADAS
+#
+# SwiftFormat trae reglas que no reformatean: reescriben código. En un
+# proyecto donde cada decisión está documentada, una reescritura automática
+# es un cambio no revisado. Estas cinco quedan fuera a propósito.
+# ---------------------------------------------------------------------------
+
+# Reescribiría `EnvironmentKey` + extensión de `EnvironmentValues` usando la macro
+# `@Entry`. Es un cambio de API, no de formato, y ata el código a iOS 18+ en un
+# punto donde la implementación manual es deliberada y está documentada.
+--disable environmentEntry
+
+# Convertiría los force-unwrap de las pruebas en `try XCTUnwrap`. Cambia el modo
+# de fallo del test: de una parada inmediata a un `throws`. En `RecurrenceRuleTests`
+# el desempaquetado directo es intencionado: si `Calendar` devuelve nil, la prueba
+# debe romperse en esa línea, no propagar un error.
+--disable noForceUnwrapInTests
+
+# Transformaría closures en key-paths (`{ $0.rawValue }` → `\.rawValue`). Es más
+# idiomático, pero es una reescritura de código; se aplicará cuando se decida, no
+# automáticamente.
+--disable preferKeyPath
+
+# Movería los `try` fuera de la expresión. Altera la estructura del código.
+--disable hoistTry
+
+# Eliminaría anotaciones de tipo explícitas. En la capa de tokens los tipos
+# explícitos son documentación intencionada.
+--disable redundantType

@@ -64,9 +64,17 @@ public struct ActivitySnapshot: Identifiable, Hashable, Codable, Sendable {
         self.updatedAt = updatedAt
     }
 
-    public var isEvaluable: Bool { status.isEvaluable }
-    public var isCompleted: Bool { status.countsAsCompleted }
-    public var wasRescheduled: Bool { status == .reprogramada || rescheduledFrom != nil }
+    public var isEvaluable: Bool {
+        status.isEvaluable
+    }
+
+    public var isCompleted: Bool {
+        status.countsAsCompleted
+    }
+
+    public var wasRescheduled: Bool {
+        status == .reprogramada || rescheduledFrom != nil
+    }
 
     /// Día natural al que pertenece la actividad, con calendario explícito.
     /// Resuelve el caso "cruce de medianoche" de §9.4: la actividad pertenece al día de su `startDate`.

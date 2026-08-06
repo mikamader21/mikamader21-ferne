@@ -57,7 +57,7 @@ public struct ScoreEngine: Sendable {
         routineCompletion: Double? = nil
     ) -> WeeklyScore {
         let start = startOfWeek(for: date)
-        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+        let days = (0 ..< 7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
         let daily = days.map { dailyScore(for: $0, activities: activities) }
 
         let daysWithData = daily.filter(\.hasData)

@@ -19,7 +19,6 @@ import SwiftUI
 /// `FerneFont` devuelve la fuente del sistema con el mismo diseño (serif o sans). La app
 /// nunca se rompe por una fuente ausente; solo cambia su carácter.
 public enum FerneFont {
-
     // MARK: - Familias
 
     enum Family {
@@ -40,9 +39,9 @@ public enum FerneFont {
     /// caliente durante el desarrollo se detecta sin reiniciar.
     static func isRegistered(_ name: String) -> Bool {
         #if canImport(UIKit)
-        return UIFont(name: name, size: 12) != nil
+            return UIFont(name: name, size: 12) != nil
         #else
-        return false
+            return false
         #endif
     }
 
@@ -71,28 +70,48 @@ public enum FerneFont {
 
     /// Logotipo y títulos de escena (Splash, Día completado, Celebración).
     public static var display: Font {
-        custom(Family.serifBold, relativeTo: .largeTitle, size: 40,
-               fallbackDesign: .serif, fallbackWeight: .bold)
+        custom(
+            Family.serifBold,
+            relativeTo: .largeTitle,
+            size: 40,
+            fallbackDesign: .serif,
+            fallbackWeight: .bold
+        )
     }
 
     /// Saludo de Inicio: "Buenos días, Fer ✨".
     public static var greeting: Font {
-        custom(Family.serifBold, relativeTo: .title, size: 30,
-               fallbackDesign: .serif, fallbackWeight: .semibold)
+        custom(
+            Family.serifBold,
+            relativeTo: .title,
+            size: 30,
+            fallbackDesign: .serif,
+            fallbackWeight: .semibold
+        )
     }
 
     /// Encabezado de sección: "Agenda de hoy", "Así va tu semana".
     public static var sectionTitle: Font {
-        custom(Family.serif, relativeTo: .title3, size: 22,
-               fallbackDesign: .serif, fallbackWeight: .semibold)
+        custom(
+            Family.serif,
+            relativeTo: .title3,
+            size: 22,
+            fallbackDesign: .serif,
+            fallbackWeight: .semibold
+        )
     }
 
     // MARK: - Funcional · Hanken Grotesk
 
     /// Título de tarjeta.
     public static var cardTitle: Font {
-        custom(Family.sansSemibold, relativeTo: .headline, size: 17,
-               fallbackDesign: .default, fallbackWeight: .semibold)
+        custom(
+            Family.sansSemibold,
+            relativeTo: .headline,
+            size: 17,
+            fallbackDesign: .default,
+            fallbackWeight: .semibold
+        )
     }
 
     /// Cuerpo.
@@ -107,27 +126,47 @@ public enum FerneFont {
 
     /// Metadatos: hora, categoría. Solo texto NO esencial.
     public static var meta: Font {
-        custom(Family.sansMedium, relativeTo: .footnote, size: 13,
-               fallbackDesign: .default, fallbackWeight: .medium)
+        custom(
+            Family.sansMedium,
+            relativeTo: .footnote,
+            size: 13,
+            fallbackDesign: .default,
+            fallbackWeight: .medium
+        )
     }
 
     /// Etiqueta en versales, con espaciado ampliado. Aplicar `.kerning(1.2)` en la vista.
     /// En las referencias: "MI DÍA", "LO QUE SIGUE", "COMPLETADAS".
     public static var labelCaps: Font {
-        custom(Family.sansBold, relativeTo: .caption, size: 12,
-               fallbackDesign: .default, fallbackWeight: .bold)
+        custom(
+            Family.sansBold,
+            relativeTo: .caption,
+            size: 12,
+            fallbackDesign: .default,
+            fallbackWeight: .bold
+        )
     }
 
     /// Cifra grande del score: "82", "78%".
     public static var scoreNumber: Font {
-        custom(Family.serifBold, relativeTo: .largeTitle, size: 44,
-               fallbackDesign: .serif, fallbackWeight: .bold)
+        custom(
+            Family.serifBold,
+            relativeTo: .largeTitle,
+            size: 44,
+            fallbackDesign: .serif,
+            fallbackWeight: .bold
+        )
     }
 
     /// Etiqueta de botón.
     public static var button: Font {
-        custom(Family.sansSemibold, relativeTo: .headline, size: 17,
-               fallbackDesign: .default, fallbackWeight: .semibold)
+        custom(
+            Family.sansSemibold,
+            relativeTo: .headline,
+            size: 17,
+            fallbackDesign: .default,
+            fallbackWeight: .semibold
+        )
     }
 
     // MARK: - Reglas

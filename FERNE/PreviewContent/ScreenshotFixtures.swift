@@ -26,18 +26,46 @@ public enum ScreenshotFixtures {
     /// Día típico: mezcla de completadas y pendientes.
     public static var mixto: [ActivitySnapshot] {
         [
-            ActivitySnapshot(title: "Despertar", category: .despertar, startDate: at(6, 30),
-                             priority: .esencial, status: .completada, completedAt: at(6, 32)),
-            ActivitySnapshot(title: "Desayuno", category: .comida, startDate: at(8, 0),
-                             status: .completada, completedAt: at(8, 15)),
-            ActivitySnapshot(title: "Gym", category: .gym, startDate: at(10, 0), endDate: at(11, 0),
-                             status: .completada, completedAt: at(11, 5)),
+            ActivitySnapshot(
+                title: "Despertar",
+                category: .despertar,
+                startDate: at(6, 30),
+                priority: .esencial,
+                status: .completada,
+                completedAt: at(6, 32)
+            ),
+            ActivitySnapshot(
+                title: "Desayuno",
+                category: .comida,
+                startDate: at(8, 0),
+                status: .completada,
+                completedAt: at(8, 15)
+            ),
+            ActivitySnapshot(
+                title: "Gym",
+                category: .gym,
+                startDate: at(10, 0),
+                endDate: at(11, 0),
+                status: .completada,
+                completedAt: at(11, 5)
+            ),
             ActivitySnapshot(title: "Almuerzo", category: .comida, startDate: at(13, 0), status: .pendiente),
-            ActivitySnapshot(title: "TikTok Live", category: .live, startDate: at(19, 0), endDate: at(20, 0),
-                             priority: .importante, status: .programada),
+            ActivitySnapshot(
+                title: "TikTok Live",
+                category: .live,
+                startDate: at(19, 0),
+                endDate: at(20, 0),
+                priority: .importante,
+                status: .programada
+            ),
             ActivitySnapshot(title: "Lectura", category: .lectura, startDate: at(21, 0), status: .programada),
-            ActivitySnapshot(title: "Dormir", category: .dormir, startDate: at(23, 45),
-                             priority: .esencial, status: .programada)
+            ActivitySnapshot(
+                title: "Dormir",
+                category: .dormir,
+                startDate: at(23, 45),
+                priority: .esencial,
+                status: .programada
+            ),
         ]
     }
 
@@ -52,13 +80,15 @@ public enum ScreenshotFixtures {
     }
 
     /// Sin actividades: estado vacío.
-    public static var vacio: [ActivitySnapshot] { [] }
+    public static var vacio: [ActivitySnapshot] {
+        []
+    }
 
     public static func activities(for fixture: UITestConfiguration.Fixture) -> [ActivitySnapshot] {
         switch fixture {
-        case .mixto:    mixto
+        case .mixto: mixto
         case .completo: completo
-        case .vacio:    vacio
+        case .vacio: vacio
         }
     }
 }

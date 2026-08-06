@@ -16,19 +16,19 @@ public struct WeeklyScore: Hashable, Codable, Sendable {
         /// Mensajes aprobados. Nunca usar vocabulario punitivo (§9.3).
         public var message: String {
             switch self {
-            case .excelente:    "Semana excelente"
-            case .muyBien:      "Vas muy bien"
-            case .avanzando:    "Sigues avanzando"
-            case .reorganizar:  "Vamos a reorganizarlo"
+            case .excelente: "Semana excelente"
+            case .muyBien: "Vas muy bien"
+            case .avanzando: "Sigues avanzando"
+            case .reorganizar: "Vamos a reorganizarlo"
             }
         }
 
         public static func forScore(_ score: Double) -> State {
             switch score {
-            case 90...:   .excelente
-            case 75..<90: .muyBien
-            case 60..<75: .avanzando
-            default:      .reorganizar
+            case 90...: .excelente
+            case 75 ..< 90: .muyBien
+            case 60 ..< 75: .avanzando
+            default: .reorganizar
             }
         }
     }
@@ -64,8 +64,13 @@ public struct WeeklyScore: Hashable, Codable, Sendable {
         self.dailyScores = dailyScores
     }
 
-    public var displayScore: Int { Int(rawScore.rounded()) }
-    public var state: State { .forScore(rawScore) }
+    public var displayScore: Int {
+        Int(rawScore.rounded())
+    }
+
+    public var state: State {
+        .forScore(rawScore)
+    }
 
     /// Desglose para la pantalla 38 "Detalle del score": el score debe explicarse siempre.
     public var breakdown: [(label: String, value: Double, weight: Double)] {
@@ -73,7 +78,7 @@ public struct WeeklyScore: Hashable, Codable, Sendable {
             ("Cumplimiento diario", dailyComponent, Self.dailyWeight),
             ("Rutinas", routineComponent, Self.routineWeight),
             ("Horarios importantes", keyScheduleComponent, Self.keyScheduleWeight),
-            ("Compromisos semanales", commitmentComponent, Self.commitmentWeight)
+            ("Compromisos semanales", commitmentComponent, Self.commitmentWeight),
         ]
     }
 

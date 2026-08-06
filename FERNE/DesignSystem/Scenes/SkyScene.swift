@@ -139,7 +139,7 @@ struct StarField: View {
     private static let positions: [(x: Double, y: Double, size: Double)] = [
         (0.12, 0.10, 2.4), (0.28, 0.06, 1.8), (0.44, 0.15, 2.0), (0.58, 0.05, 1.6),
         (0.86, 0.12, 2.2), (0.20, 0.22, 1.7), (0.66, 0.24, 2.1), (0.92, 0.28, 1.5),
-        (0.08, 0.34, 1.9), (0.38, 0.31, 1.6), (0.74, 0.36, 2.3), (0.52, 0.40, 1.4)
+        (0.08, 0.34, 1.9), (0.38, 0.31, 1.6), (0.74, 0.36, 2.3), (0.52, 0.40, 1.4),
     ]
 
     var body: some View {
@@ -154,7 +154,7 @@ struct StarField: View {
                         .animation(
                             animate
                                 ? .easeInOut(duration: FerneMotion.sparkleCycle + Double(index) * 0.17)
-                                    .repeatForever(autoreverses: true)
+                                .repeatForever(autoreverses: true)
                                 : nil,
                             value: animate
                         )
@@ -174,7 +174,7 @@ struct SparkleLayer: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                ForEach(0..<count, id: \.self) { index in
+                ForEach(0 ..< count, id: \.self) { index in
                     let seed = Double(index)
                     Circle()
                         .fill(color)
@@ -188,7 +188,7 @@ struct SparkleLayer: View {
                         .animation(
                             animate
                                 ? .easeInOut(duration: FerneMotion.sparkleCycle + seed * 0.23)
-                                    .repeatForever(autoreverses: true)
+                                .repeatForever(autoreverses: true)
                                 : nil,
                             value: animate
                         )
@@ -199,5 +199,5 @@ struct SparkleLayer: View {
 }
 
 #Preview("Mañana") { SkyScene().ferneTheme(.manana) }
-#Preview("Tarde")  { SkyScene().ferneTheme(.tarde) }
-#Preview("Noche")  { SkyScene().ferneTheme(.noche) }
+#Preview("Tarde") { SkyScene().ferneTheme(.tarde) }
+#Preview("Noche") { SkyScene().ferneTheme(.noche) }

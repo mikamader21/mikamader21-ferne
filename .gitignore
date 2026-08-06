@@ -64,3 +64,6 @@ UBICACION-DEL-PROYECTO.txt
 
 # Galería generada localmente (contiene copias de referencias y capturas)
 gallery/
+
+# Logs de ejecuciones de CI descargados manualmente
+pipeline-*.log

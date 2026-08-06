@@ -1,6 +1,6 @@
 import Foundation
 #if canImport(AlarmKit)
-import AlarmKit
+    import AlarmKit
 #endif
 
 /// Puerta de entrada a AlarmKit.
@@ -22,7 +22,6 @@ import AlarmKit
 /// Regla que no se negocia (MASTER_SPEC §8.2): **nunca** se promete una alarma que el
 /// sistema no puede garantizar. Ver `docs/NOTIFICATIONS.md`.
 public enum AlarmCapability {
-
     /// Estado real de AlarmKit en este dispositivo, ahora mismo.
     public enum Status: Equatable, Sendable {
         /// Disponible y utilizable para alarmas prominentes.
@@ -38,7 +37,7 @@ public enum AlarmCapability {
         /// Honesto: si no va a sonar como alarma, se dice.
         public var displayText: String {
             switch self {
-            case .available:     "Alarmas prominentes disponibles"
+            case .available: "Alarmas prominentes disponibles"
             case .notCompiledIn: "No disponible en esta versión de la app"
             case .unsupportedOS: "Tu versión de iOS no admite alarmas prominentes"
             case .notAuthorized: "Sin permiso para alarmas prominentes"
@@ -46,15 +45,17 @@ public enum AlarmCapability {
         }
 
         /// `true` si hay que recurrir a una notificación local.
-        public var requiresFallback: Bool { self != .available }
+        public var requiresFallback: Bool {
+            self != .available
+        }
     }
 
     /// `true` si el framework estaba presente al compilar.
     public static var isCompiledIn: Bool {
         #if canImport(AlarmKit)
-        return true
+            return true
         #else
-        return false
+            return false
         #endif
     }
 
@@ -65,13 +66,13 @@ public enum AlarmCapability {
     /// llamador debe seguir usando el fallback.
     public static var status: Status {
         #if canImport(AlarmKit)
-        if #available(iOS 26.0, *) {
-            return .available
-        } else {
-            return .unsupportedOS
-        }
+            if #available(iOS 26.0, *) {
+                return .available
+            } else {
+                return .unsupportedOS
+            }
         #else
-        return .notCompiledIn
+            return .notCompiledIn
         #endif
     }
 

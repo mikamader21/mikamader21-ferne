@@ -48,11 +48,15 @@ public struct FerneSecondaryButtonStyle: ButtonStyle {
 }
 
 public extension ButtonStyle where Self == FernePrimaryButtonStyle {
-    static var fernePrimary: FernePrimaryButtonStyle { FernePrimaryButtonStyle() }
+    static var fernePrimary: FernePrimaryButtonStyle {
+        FernePrimaryButtonStyle()
+    }
 }
 
 public extension ButtonStyle where Self == FerneSecondaryButtonStyle {
-    static var ferneSecondary: FerneSecondaryButtonStyle { FerneSecondaryButtonStyle() }
+    static var ferneSecondary: FerneSecondaryButtonStyle {
+        FerneSecondaryButtonStyle()
+    }
 }
 
 /// FAB `+`: círculo rosa con haptic suave (§4.4).

@@ -7,7 +7,9 @@ import Foundation
 public enum PreviewData {
     public static let calendar: Calendar = .ferneDefault
 
-    private static var todayStart: Date { calendar.startOfDay(for: Date()) }
+    private static var todayStart: Date {
+        calendar.startOfDay(for: Date())
+    }
 
     private static func at(_ hour: Int, _ minute: Int = 0, dayOffset: Int = 0) -> Date {
         let base = calendar.date(byAdding: .day, value: dayOffset, to: todayStart) ?? todayStart
@@ -25,39 +27,85 @@ public enum PreviewData {
             return ScreenshotFixtures.activities(for: UITestConfiguration.fixture)
         }
         return [
-            ActivitySnapshot(title: "Despertar", category: .despertar, startDate: at(6, 30),
-                             priority: .esencial, status: .completada, completedAt: at(6, 32)),
-            ActivitySnapshot(title: "Desayuno", category: .comida, startDate: at(8, 0),
-                             status: .completada, completedAt: at(8, 15)),
-            ActivitySnapshot(title: "Gym", category: .gym, startDate: at(10, 0),
-                             endDate: at(11, 0), status: .completada, completedAt: at(11, 5)),
+            ActivitySnapshot(
+                title: "Despertar",
+                category: .despertar,
+                startDate: at(6, 30),
+                priority: .esencial,
+                status: .completada,
+                completedAt: at(6, 32)
+            ),
+            ActivitySnapshot(
+                title: "Desayuno",
+                category: .comida,
+                startDate: at(8, 0),
+                status: .completada,
+                completedAt: at(8, 15)
+            ),
+            ActivitySnapshot(
+                title: "Gym",
+                category: .gym,
+                startDate: at(10, 0),
+                endDate: at(11, 0),
+                status: .completada,
+                completedAt: at(11, 5)
+            ),
             ActivitySnapshot(title: "Almuerzo", category: .comida, startDate: at(13, 0), status: .pendiente),
-            ActivitySnapshot(title: "TikTok Live", category: .live, startDate: at(19, 0),
-                             endDate: at(20, 0), priority: .importante, status: .programada),
+            ActivitySnapshot(
+                title: "TikTok Live",
+                category: .live,
+                startDate: at(19, 0),
+                endDate: at(20, 0),
+                priority: .importante,
+                status: .programada
+            ),
             ActivitySnapshot(title: "Lectura", category: .lectura, startDate: at(21, 0), status: .programada),
-            ActivitySnapshot(title: "Dormir", category: .dormir, startDate: at(23, 45),
-                             priority: .esencial, status: .programada)
+            ActivitySnapshot(
+                title: "Dormir",
+                category: .dormir,
+                startDate: at(23, 45),
+                priority: .esencial,
+                status: .programada
+            ),
         ]
     }
 
     /// Semana completa para probar el score semanal.
     public static var week: [ActivitySnapshot] {
         var result: [ActivitySnapshot] = today
-        for dayOffset in -4...(-1) {
+        for dayOffset in -4 ... -1 {
             result.append(contentsOf: [
-                ActivitySnapshot(title: "Despertar", category: .despertar, startDate: at(6, 30, dayOffset: dayOffset),
-                                 priority: .esencial, status: .completada),
-                ActivitySnapshot(title: "Almuerzo", category: .comida, startDate: at(13, 0, dayOffset: dayOffset),
-                                 status: dayOffset % 2 == 0 ? .completada : .pendiente),
-                ActivitySnapshot(title: "Lectura", category: .lectura, startDate: at(21, 0, dayOffset: dayOffset),
-                                 status: .completada)
+                ActivitySnapshot(
+                    title: "Despertar",
+                    category: .despertar,
+                    startDate: at(6, 30, dayOffset: dayOffset),
+                    priority: .esencial,
+                    status: .completada
+                ),
+                ActivitySnapshot(
+                    title: "Almuerzo",
+                    category: .comida,
+                    startDate: at(13, 0, dayOffset: dayOffset),
+                    status: dayOffset % 2 == 0 ? .completada : .pendiente
+                ),
+                ActivitySnapshot(
+                    title: "Lectura",
+                    category: .lectura,
+                    startDate: at(21, 0, dayOffset: dayOffset),
+                    status: .completada
+                ),
             ])
         }
         return result
     }
 
-    public static var evaluableCount: Int { today.filter(\.isEvaluable).count }
-    public static var completedCount: Int { today.filter(\.isCompleted).count }
+    public static var evaluableCount: Int {
+        today.filter(\.isEvaluable).count
+    }
+
+    public static var completedCount: Int {
+        today.filter(\.isCompleted).count
+    }
 
     public static var dayProgress: Double {
         guard evaluableCount > 0 else { return 0 }

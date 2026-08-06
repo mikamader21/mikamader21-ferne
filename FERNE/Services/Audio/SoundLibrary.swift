@@ -23,12 +23,12 @@ public struct FerneSound: Identifiable, Hashable, Sendable {
 }
 
 public enum SoundLibrary {
-    public static let amanecer  = FerneSound(id: "amanecer",  displayName: "Amanecer",  fileName: "amanecer.caf")
+    public static let amanecer = FerneSound(id: "amanecer", displayName: "Amanecer", fileName: "amanecer.caf")
     public static let campanita = FerneSound(id: "campanita", displayName: "Campanita", fileName: "campanita.caf")
-    public static let destello  = FerneSound(id: "destello",  displayName: "Destello",  fileName: "destello.caf")
-    public static let flor      = FerneSound(id: "flor",      displayName: "Flor",      fileName: "flor.caf")
-    public static let luna      = FerneSound(id: "luna",      displayName: "Luna",      fileName: "luna.caf")
-    public static let sueno     = FerneSound(id: "sueno",     displayName: "Sueño",     fileName: "sueno.caf")
+    public static let destello = FerneSound(id: "destello", displayName: "Destello", fileName: "destello.caf")
+    public static let flor = FerneSound(id: "flor", displayName: "Flor", fileName: "flor.caf")
+    public static let luna = FerneSound(id: "luna", displayName: "Luna", fileName: "luna.caf")
+    public static let sueno = FerneSound(id: "sueno", displayName: "Sueño", fileName: "sueno.caf")
 
     /// Identificadores especiales, siempre disponibles.
     public static let systemSoundID = "sistema"
@@ -41,5 +41,7 @@ public enum SoundLibrary {
     }
 
     /// Sonidos que realmente pueden reproducirse ahora mismo.
-    public static var available: [FerneSound] { all.filter(\.isAvailable) }
+    public static var available: [FerneSound] {
+        all.filter(\.isAvailable)
+    }
 }

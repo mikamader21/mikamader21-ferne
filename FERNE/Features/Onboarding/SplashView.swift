@@ -66,5 +66,5 @@ struct SplashView: View {
     }
 }
 
-#Preview("Splash · día")   { SplashView {}.ferneTheme(.manana) }
+#Preview("Splash · día") { SplashView {}.ferneTheme(.manana) }
 #Preview("Splash · noche") { SplashView {}.ferneTheme(.noche) }

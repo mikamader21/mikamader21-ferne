@@ -18,7 +18,9 @@ public struct FerneTheme: Equatable, Sendable {
     /// Opacidad de las estrellas. 0 en día.
     public let starOpacity: Double
 
-    public var celestialBody: CelestialBody { phase.celestialBody }
+    public var celestialBody: CelestialBody {
+        phase.celestialBody
+    }
 
     public var skyGradient: LinearGradient {
         LinearGradient(colors: skyColors, startPoint: .top, endPoint: .bottom)
@@ -51,9 +53,9 @@ public struct FerneTheme: Equatable, Sendable {
         skyColors: [
             FerneColor.dawnPink.opacity(0.75),
             FerneColor.cloudPink,
-            FerneColor.skyCyan.opacity(0.18),       // atmosférico: cielo alto
+            FerneColor.skyCyan.opacity(0.18), // atmosférico: cielo alto
             FerneColor.peachCoral.opacity(0.55),
-            FerneColor.ivoryRose
+            FerneColor.ivoryRose,
         ],
         celestialCore: FerneColor.sunGold,
         celestialHalo: FerneColor.peachCoral,
@@ -69,11 +71,11 @@ public struct FerneTheme: Equatable, Sendable {
     public static let tarde = FerneTheme(
         phase: .tarde,
         skyColors: [
-            FerneColor.skyCyan.opacity(0.12),       // atmosférico: más suave que en la mañana
+            FerneColor.skyCyan.opacity(0.12), // atmosférico: más suave que en la mañana
             FerneColor.dawnPeach.opacity(0.5),
             FerneColor.peachCoral.opacity(0.45),
             FerneColor.cloudPink.opacity(0.7),
-            FerneColor.ivoryRose
+            FerneColor.ivoryRose,
         ],
         celestialCore: FerneColor.sunGold,
         celestialHalo: FerneColor.sunGold,
@@ -99,15 +101,15 @@ public struct FerneTheme: Equatable, Sendable {
     public static let noche = FerneTheme(
         phase: .noche,
         skyColors: [
-            FerneColor.deepPlum,                    // ciruela profundo, nunca negro
+            FerneColor.deepPlum, // ciruela profundo, nunca negro
             FerneColor.secondaryPlum,
-            FerneColor.softIndigo.opacity(0.45),    // atmosférico: índigo suave
-            FerneColor.nightPlum,                   // ciruela nocturno de transición
-            FerneColor.lavender.opacity(0.7),       // atmosférico: lavanda
-            FerneColor.softPink.opacity(0.55)       // el rosado nunca desaparece
+            FerneColor.softIndigo.opacity(0.45), // atmosférico: índigo suave
+            FerneColor.nightPlum, // ciruela nocturno de transición
+            FerneColor.lavender.opacity(0.7), // atmosférico: lavanda
+            FerneColor.softPink.opacity(0.55), // el rosado nunca desaparece
         ],
         celestialCore: FerneColor.luminousWhite,
-        celestialHalo: FerneColor.sunGold,          // halo cálido: la luna de FERNÉ no es fría
+        celestialHalo: FerneColor.sunGold, // halo cálido: la luna de FERNÉ no es fría
         cloudColor: FerneColor.softPink.opacity(0.32), // nubes rosadas oscuras, no grises
         particleColor: FerneColor.luminousWhite,
         titleColor: FerneColor.warmWhite,
@@ -119,8 +121,8 @@ public struct FerneTheme: Equatable, Sendable {
     public static func theme(for phase: DayPhase) -> FerneTheme {
         switch phase {
         case .manana: manana
-        case .tarde:  tarde
-        case .noche:  noche
+        case .tarde: tarde
+        case .noche: noche
         }
     }
 }

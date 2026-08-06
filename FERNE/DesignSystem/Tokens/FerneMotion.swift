@@ -14,9 +14,9 @@ public enum FerneMotion {
     public static let splash: Double = 2.6
 
     /// Rango válido para transiciones de interfaz. Fuera de él, es un error de diseño.
-    public static let uiRange: ClosedRange<Double> = 0.20...0.45
+    public static let uiRange: ClosedRange<Double> = 0.20 ... 0.45
     /// Rango válido para escenas cinematográficas.
-    public static let sceneRange: ClosedRange<Double> = 2.0...3.0
+    public static let sceneRange: ClosedRange<Double> = 2.0 ... 3.0
 
     // MARK: - Curvas
 
@@ -53,6 +53,10 @@ public struct AmbientMotion: ViewModifier {
     public func body(content: Content) -> some View {
         content
             .animation(reduceMotion ? nil : animation, value: isAnimating)
-            .onAppear { if !reduceMotion { isAnimating = true } }
+            .onAppear {
+                if !reduceMotion {
+                    isAnimating = true
+                }
+            }
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 
 /// Haptics con intención, no en cada toque (MASTER_SPEC §4.6).
@@ -25,12 +25,12 @@ public final class Haptics {
     public func tap(_ tap: Tap) {
         guard isEnabled else { return }
         #if canImport(UIKit)
-        let style: UIImpactFeedbackGenerator.FeedbackStyle = switch tap {
-        case .soft: .soft
-        case .light: .light
-        case .medium: .medium
-        }
-        UIImpactFeedbackGenerator(style: style).impactOccurred()
+            let style: UIImpactFeedbackGenerator.FeedbackStyle = switch tap {
+            case .soft: .soft
+            case .light: .light
+            case .medium: .medium
+            }
+            UIImpactFeedbackGenerator(style: style).impactOccurred()
         #endif
     }
 
@@ -38,7 +38,7 @@ public final class Haptics {
     public func success() {
         guard isEnabled else { return }
         #if canImport(UIKit)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
     }
 
@@ -46,7 +46,7 @@ public final class Haptics {
     public func warning() {
         guard isEnabled else { return }
         #if canImport(UIKit)
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
         #endif
     }
 }

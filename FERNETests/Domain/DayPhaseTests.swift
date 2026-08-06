@@ -2,9 +2,9 @@ import Foundation
 import XCTest
 
 #if canImport(FERNE)
-@testable import FERNE
+    @testable import FERNE
 #else
-@testable import FerneDomain
+    @testable import FerneDomain
 #endif
 
 /// Verifica los límites horarios de los temas (MASTER_SPEC §4.5).

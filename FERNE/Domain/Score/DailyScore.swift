@@ -32,8 +32,12 @@ public struct DailyScore: Hashable, Codable, Sendable {
     }
 
     /// Valor mostrado al usuario.
-    public var displayPercentage: Int { Int(rawPercentage.rounded()) }
+    public var displayPercentage: Int {
+        Int(rawPercentage.rounded())
+    }
 
     /// Un día sin actividades evaluables no es un 0%: es un día sin datos.
-    public var hasData: Bool { evaluableCount > 0 }
+    public var hasData: Bool {
+        evaluableCount > 0
+    }
 }

@@ -2,17 +2,19 @@ import Foundation
 import XCTest
 
 #if canImport(FERNE)
-@testable import FERNE
+    @testable import FERNE
 #else
-@testable import FerneDomain
+    @testable import FerneDomain
 #endif
 
 /// Cubre los ocho casos obligatorios de MASTER_SPEC §9.4.
 final class ScoreEngineTests: XCTestCase {
     private let calendar = TestSupport.calendar()
-    private var engine: ScoreEngine { ScoreEngine(calendar: calendar) }
+    private var engine: ScoreEngine {
+        ScoreEngine(calendar: calendar)
+    }
 
-    // §9.4 · Caso 1 — Día sin actividades
+    /// §9.4 · Caso 1 — Día sin actividades
     func testDayWithoutActivitiesHasNoDataAndDoesNotScoreZeroAsFailure() {
         let day = TestSupport.date(2026, 8, 6)
         let score = engine.dailyScore(for: day, activities: [])
@@ -22,13 +24,13 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(score.rawPercentage, 0, accuracy: 0.0001)
     }
 
-    // §9.4 · Caso 2 — Todas completadas
+    /// §9.4 · Caso 2 — Todas completadas
     func testAllCompletedGivesOneHundred() {
         let day = TestSupport.date(2026, 8, 6)
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 13), status: .completada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 20), status: .completada)
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 20), status: .completada),
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -37,13 +39,13 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(score.displayPercentage, 100)
     }
 
-    // §9.4 · Caso 3 — Algunas reprogramadas: se informan aparte, no son fracaso
+    /// §9.4 · Caso 3 — Algunas reprogramadas: se informan aparte, no son fracaso
     func testRescheduledActivitiesAreReportedApartAndDoNotLowerTheScore() {
         let day = TestSupport.date(2026, 8, 6)
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .reprogramada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .reprogramada)
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .reprogramada),
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -52,13 +54,13 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(score.displayPercentage, 100, "Reprogramar no puede castigar el score.")
     }
 
-    // §9.4 · Caso 4 — Actividad cancelada: se excluye
+    /// §9.4 · Caso 4 — Actividad cancelada: se excluye
     func testCancelledActivitiesAreExcludedFromDenominator() {
         let day = TestSupport.date(2026, 8, 6)
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .completada),
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .cancelada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .pendiente)
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 11), status: .pendiente),
         ]
         let score = engine.dailyScore(for: day, activities: activities)
 
@@ -67,14 +69,14 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(score.displayPercentage, 50)
     }
 
-    // §9.4 · Caso 5 — Cruce de medianoche
+    /// §9.4 · Caso 5 — Cruce de medianoche
     func testActivityJustAfterMidnightBelongsToTheNewDay() {
-        let lateNight = TestSupport.date(2026, 8, 6, 23, 40)   // dormir
+        let lateNight = TestSupport.date(2026, 8, 6, 23, 40) // dormir
         let afterMidnight = TestSupport.date(2026, 8, 7, 0, 20) // ya es día 7
 
         let activities = [
             TestSupport.activity(title: "Dormir", category: .dormir, at: lateNight, status: .completada),
-            TestSupport.activity(title: "Nota", category: .nota, at: afterMidnight, status: .pendiente)
+            TestSupport.activity(title: "Nota", category: .nota, at: afterMidnight, status: .pendiente),
         ]
 
         let day6 = engine.dailyScore(for: TestSupport.date(2026, 8, 6), activities: activities)
@@ -86,7 +88,7 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(day7.displayPercentage, 0)
     }
 
-    // §9.4 · Caso 6 — Cambio de zona horaria
+    /// §9.4 · Caso 6 — Cambio de zona horaria
     func testSameInstantCanBelongToDifferentDaysAcrossTimeZones() {
         let bogota = TestSupport.calendar(timeZoneID: "America/Bogota")
         let madrid = TestSupport.calendar(timeZoneID: "Europe/Madrid")
@@ -104,27 +106,31 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(madridScore.completedCount, 1, "En Madrid el mismo instante cae en el día 7.")
     }
 
-    // §9.4 · Caso 7 — Semana parcial: los días sin datos no arrastran la media
+    /// §9.4 · Caso 7 — Semana parcial: los días sin datos no arrastran la media
     func testPartialWeekIgnoresDaysWithoutData() {
         // Semana del lunes 3 al domingo 9 de agosto de 2026.
         let activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 3, 8), status: .completada),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 4, 8), status: .completada)
+            TestSupport.activity(at: TestSupport.date(2026, 8, 4, 8), status: .completada),
         ]
         let weekly = engine.weeklyScore(weekContaining: TestSupport.date(2026, 8, 5), activities: activities)
 
-        XCTAssertEqual(weekly.dailyComponent, 100, accuracy: 0.0001,
-                       "Los cinco días sin datos no deben contar como 0%.")
+        XCTAssertEqual(
+            weekly.dailyComponent,
+            100,
+            accuracy: 0.0001,
+            "Los cinco días sin datos no deben contar como 0%."
+        )
         XCTAssertEqual(weekly.displayScore, 100)
         XCTAssertEqual(weekly.state, .excelente)
     }
 
-    // §9.4 · Caso 8 — Datos históricos modificados: el score se recalcula, no se conserva
+    /// §9.4 · Caso 8 — Datos históricos modificados: el score se recalcula, no se conserva
     func testEditingHistoricalDataRecalculatesTheScore() {
         let day = TestSupport.date(2026, 8, 6)
         var activities = [
             TestSupport.activity(at: TestSupport.date(2026, 8, 6, 7), status: .pendiente),
-            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .pendiente)
+            TestSupport.activity(at: TestSupport.date(2026, 8, 6, 9), status: .pendiente),
         ]
         XCTAssertEqual(engine.dailyScore(for: day, activities: activities).displayPercentage, 0)
 
@@ -135,7 +141,7 @@ final class ScoreEngineTests: XCTestCase {
         XCTAssertEqual(engine.dailyScore(for: day, activities: activities).displayPercentage, 100)
     }
 
-    // §9.2 — Ponderación 40/20/20/20
+    /// §9.2 — Ponderación 40/20/20/20
     func testWeeklyWeightsSumToOne() {
         let total = WeeklyScore.dailyWeight + WeeklyScore.routineWeight
             + WeeklyScore.keyScheduleWeight + WeeklyScore.commitmentWeight
@@ -162,7 +168,7 @@ final class ScoreEngineTests: XCTestCase {
 
     func testInternalPrecisionIsPreservedWhileDisplayRounds() {
         let day = TestSupport.date(2026, 8, 6)
-        let activities = (0..<3).map { index in
+        let activities = (0 ..< 3).map { index in
             TestSupport.activity(
                 at: TestSupport.date(2026, 8, 6, 7 + index),
                 status: index == 0 ? .completada : .pendiente

@@ -46,6 +46,7 @@ public enum FerneColor {
     public static let attentionAmber = Color(hex: 0xF4B86A)
 
     // MARK: - Atmosféricos
+
     //
     // Muestreados de `docs/design-references/01-splash-approved.png`.
     // Uso EXCLUSIVO en escenas: cielo, transiciones, reflejos, halos y partículas.
@@ -68,7 +69,7 @@ public enum FerneColor {
 
     /// Los colores atmosféricos, para auditoría y pruebas.
     public static let atmospheric: [Color] = [
-        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum, luminousWhite
+        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum, luminousWhite,
     ]
 
     // MARK: - Rojo reservado
@@ -116,28 +117,28 @@ public enum FerneColor {
     public static func categoryTint(_ category: ActivityCategory) -> Color {
         switch category {
         case .despertar: sunGold
-        case .comida:    peachCoral
-        case .gym:       fernePink
-        case .trabajo:   secondaryPlum
-        case .live:      softPink
-        case .lectura:   cloudPink
-        case .pago:      attentionAmber
-        case .rutina:    softPink
-        case .evento:    fernePink
-        case .nota:      roseGray
-        case .dormir:    deepPlum
-        case .personal:  fernePink
+        case .comida: peachCoral
+        case .gym: fernePink
+        case .trabajo: secondaryPlum
+        case .live: softPink
+        case .lectura: cloudPink
+        case .pago: attentionAmber
+        case .rutina: softPink
+        case .evento: fernePink
+        case .nota: roseGray
+        case .dormir: deepPlum
+        case .personal: fernePink
         }
     }
 
     public static func statusTint(_ status: ActivityStatus) -> Color {
         switch status {
-        case .completada:   successSoft
-        case .pendiente:    attentionAmber
+        case .completada: successSoft
+        case .pendiente: attentionAmber
         case .reprogramada: softPink
-        case .programada:   secondaryPlum
-        case .omitida:      roseGray
-        case .cancelada:    roseGray
+        case .programada: secondaryPlum
+        case .omitida: roseGray
+        case .cancelada: roseGray
         }
     }
 }

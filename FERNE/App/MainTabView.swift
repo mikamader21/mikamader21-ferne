@@ -14,19 +14,19 @@ struct MainTabView: View {
 
         var title: String {
             switch self {
-            case .inicio:    "Inicio"
-            case .progreso:  "Progreso"
+            case .inicio: "Inicio"
+            case .progreso: "Progreso"
             case .destellos: "Destellos"
-            case .perfil:    "Perfil"
+            case .perfil: "Perfil"
             }
         }
 
         var symbol: String {
             switch self {
-            case .inicio:    "sun.horizon.fill"
-            case .progreso:  "chart.line.uptrend.xyaxis"
+            case .inicio: "sun.horizon.fill"
+            case .progreso: "chart.line.uptrend.xyaxis"
             case .destellos: "sparkles"
-            case .perfil:    "person.crop.circle"
+            case .perfil: "person.crop.circle"
             }
         }
     }
@@ -49,10 +49,10 @@ struct MainTabView: View {
     @ViewBuilder
     private func destination(for tab: Tab) -> some View {
         switch tab {
-        case .inicio:    HomeView()
-        case .progreso:  ProgressView()
+        case .inicio: HomeView()
+        case .progreso: ProgressView()
         case .destellos: SparksView()
-        case .perfil:    ProfileView()
+        case .perfil: ProfileView()
         }
     }
 }

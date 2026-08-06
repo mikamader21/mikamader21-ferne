@@ -2,9 +2,9 @@ import Foundation
 import XCTest
 
 #if canImport(FERNE)
-@testable import FERNE
+    @testable import FERNE
 #else
-@testable import FerneDomain
+    @testable import FerneDomain
 #endif
 
 final class RecurrenceRuleTests: XCTestCase {
@@ -13,7 +13,7 @@ final class RecurrenceRuleTests: XCTestCase {
     func testDailyRuleOccursEveryDay() {
         let anchor = TestSupport.date(2026, 8, 3, 7, calendar: calendar)
         let rule = RecurrenceRule.daily
-        for offset in 0..<10 {
+        for offset in 0 ..< 10 {
             let day = calendar.date(byAdding: .day, value: offset, to: anchor)!
             XCTAssertTrue(rule.occurs(on: day, anchor: anchor, calendar: calendar))
         }

@@ -64,8 +64,10 @@ final class ScreenshotTests: XCTestCase {
     func testCapturaSplash() {
         for phase in ["manana", "noche"] {
             let app = launch(phase: phase, skipSplash: false)
-            XCTAssertTrue(app.otherElements["screen.splash"].waitForExistence(timeout: 5),
-                          "El splash debe aparecer en \(phase).")
+            XCTAssertTrue(
+                app.otherElements["screen.splash"].waitForExistence(timeout: 5),
+                "El splash debe aparecer en \(phase)."
+            )
             attach(app.screenshot(), named: "splash-\(phase)")
             app.terminate()
         }
@@ -77,7 +79,7 @@ final class ScreenshotTests: XCTestCase {
             ("Inicio", "screen.home"),
             ("Progreso", "screen.progress"),
             ("Destellos", "screen.sparks"),
-            ("Perfil", "screen.profile")
+            ("Perfil", "screen.profile"),
         ]
         for phase in ["manana", "noche"] {
             let app = launch(phase: phase)
@@ -106,7 +108,7 @@ final class ScreenshotTests: XCTestCase {
             "-FERNEPhase", phase,
             "-FERNEFixture", fixture,
             "-FERNESkipSplash", skipSplash ? "1" : "0",
-            "-FERNEReduceMotion", reduceMotion ? "1" : "0"
+            "-FERNEReduceMotion", reduceMotion ? "1" : "0",
         ]
         if let contentSize {
             // Argumento estándar de UIKit: cambia el tamaño de texto sin tocar Ajustes.
@@ -127,13 +129,17 @@ final class ScreenshotTests: XCTestCase {
         contentSize: String? = nil
     ) {
         let app = launch(phase: phase, fixture: fixture, reduceMotion: reduceMotion, contentSize: contentSize)
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15),
-                      "La app no llegó a la barra de pestañas para '\(name)'.")
+        XCTAssertTrue(
+            app.tabBars.firstMatch.waitForExistence(timeout: 15),
+            "La app no llegó a la barra de pestañas para '\(name)'."
+        )
         if let tab {
             app.tabBars.buttons[tab].tap()
         }
-        XCTAssertTrue(app.otherElements[screen].waitForExistence(timeout: 8),
-                      "No apareció '\(screen)' para '\(name)'.")
+        XCTAssertTrue(
+            app.otherElements[screen].waitForExistence(timeout: 8),
+            "No apareció '\(screen)' para '\(name)'."
+        )
         // Margen para que la escena termine su transición de entrada.
         Thread.sleep(forTimeInterval: 1.0)
         attach(app.screenshot(), named: name)

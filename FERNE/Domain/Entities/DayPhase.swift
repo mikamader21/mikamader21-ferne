@@ -16,9 +16,9 @@ public enum DayPhase: String, CaseIterable, Codable, Sendable {
     public static func from(_ date: Date, calendar: Calendar = .ferneDefault) -> DayPhase {
         let hour = calendar.component(.hour, from: date)
         switch hour {
-        case 5...11:  return .manana
-        case 12...18: return .tarde
-        default:      return .noche   // 19…23 y 0…4
+        case 5 ... 11: return .manana
+        case 12 ... 18: return .tarde
+        default: return .noche // 19…23 y 0…4
         }
     }
 
@@ -26,8 +26,8 @@ public enum DayPhase: String, CaseIterable, Codable, Sendable {
     public func greeting(name: String) -> String {
         switch self {
         case .manana: "Buenos días, \(name) ✨"
-        case .tarde:  "Buenas tardes, \(name)"
-        case .noche:  "Buenas noches, \(name) 🌙"
+        case .tarde: "Buenas tardes, \(name)"
+        case .noche: "Buenas noches, \(name) 🌙"
         }
     }
 
@@ -35,15 +35,15 @@ public enum DayPhase: String, CaseIterable, Codable, Sendable {
     public var celestialBody: CelestialBody {
         switch self {
         case .manana, .tarde: .sun
-        case .noche:          .moon
+        case .noche: .moon
         }
     }
 
     public var accessibilityDescription: String {
         switch self {
         case .manana: "Amanecer con sol emergente y nubes"
-        case .tarde:  "Cielo de tarde con sol alto y destellos"
-        case .noche:  "Cielo nocturno ciruela con luna y estrellas"
+        case .tarde: "Cielo de tarde con sol alto y destellos"
+        case .noche: "Cielo nocturno ciruela con luna y estrellas"
         }
     }
 }

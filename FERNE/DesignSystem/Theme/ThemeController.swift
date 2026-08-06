@@ -16,14 +16,16 @@ public final class ThemeController {
         // de mañana, tarde y noche no pueden depender de la hora del simulador.
         if let forced = UITestConfiguration.forcedPhase {
             self.provider = FixedDayPhaseProvider(phase: forced, date: ScreenshotFixtures.anchorDate)
-            self.phase = forced
+            phase = forced
         } else {
             self.provider = provider
-            self.phase = provider.currentPhase
+            phase = provider.currentPhase
         }
     }
 
-    public var theme: FerneTheme { .theme(for: phase) }
+    public var theme: FerneTheme {
+        .theme(for: phase)
+    }
 
     public func refresh() {
         guard UITestConfiguration.forcedPhase == nil else { return }

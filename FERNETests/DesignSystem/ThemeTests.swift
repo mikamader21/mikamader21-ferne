@@ -51,8 +51,8 @@ final class ThemeTests: XCTestCase {
     }
 
     func testCardRadiusStaysInApprovedRange() {
-        XCTAssertTrue((20.0...24.0).contains(FerneRadius.card))
-        XCTAssertTrue((20.0...24.0).contains(FerneRadius.cardLarge))
+        XCTAssertTrue((20.0 ... 24.0).contains(FerneRadius.card))
+        XCTAssertTrue((20.0 ... 24.0).contains(FerneRadius.cardLarge))
     }
 
     func testParticleDensityStaysLow() {
@@ -60,7 +60,9 @@ final class ThemeTests: XCTestCase {
     }
 
     func testSoundLibraryDeclaresTheSixApprovedSounds() {
-        XCTAssertEqual(SoundLibrary.all.map(\.displayName),
-                       ["Amanecer", "Campanita", "Destello", "Flor", "Luna", "Sueño"])
+        XCTAssertEqual(
+            SoundLibrary.all.map(\.displayName),
+            ["Amanecer", "Campanita", "Destello", "Flor", "Luna", "Sueño"]
+        )
     }
 }

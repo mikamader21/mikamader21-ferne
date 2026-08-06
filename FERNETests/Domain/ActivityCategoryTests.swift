@@ -2,9 +2,9 @@ import Foundation
 import XCTest
 
 #if canImport(FERNE)
-@testable import FERNE
+    @testable import FERNE
 #else
-@testable import FerneDomain
+    @testable import FerneDomain
 #endif
 
 final class ActivityCategoryTests: XCTestCase {
@@ -12,7 +12,7 @@ final class ActivityCategoryTests: XCTestCase {
     func testRawValuesAreStable() {
         let expected: Set<String> = [
             "despertar", "comida", "gym", "trabajo", "live", "lectura",
-            "pago", "rutina", "evento", "nota", "dormir", "personal"
+            "pago", "rutina", "evento", "nota", "dormir", "personal",
         ]
         XCTAssertEqual(Set(ActivityCategory.allCases.map(\.rawValue)), expected)
     }

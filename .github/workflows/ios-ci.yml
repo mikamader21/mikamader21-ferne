@@ -33,7 +33,12 @@ permissions:
   contents: read
 
 env:
-  XCODEGEN_VERSION: '2.43.0'
+  # Versiones fijadas. Una actualización silenciosa de Homebrew no debe cambiar
+  # el resultado del pipeline: el mismo código tiene que dar el mismo veredicto
+  # hoy y dentro de seis meses.
+  XCODEGEN_VERSION: '2.46.0'
+  SWIFTFORMAT_VERSION: '0.62.1'   # debe coincidir con la cabecera de .swiftformat
+  SWIFTLINT_VERSION: '0.65.0'
   DERIVED_DATA: build/DerivedData
   ARTIFACTS: artifacts
 
@@ -47,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Archivos obligatorios
         run: bash Scripts/ci/check-required-files.sh
@@ -88,7 +93,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Seleccionar Xcode
         run: |
@@ -122,18 +127,55 @@ jobs:
 
       - name: Instalar XcodeGen
         run: |
-          # Versión fijada: una actualización de XcodeGen no debe cambiar el
-          # proyecto generado sin que nos enteremos.
+          set -euo pipefail
           if ! command -v xcodegen > /dev/null; then
             brew install xcodegen
           fi
+          INSTALLED=$(xcodegen --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "XcodeGen instalado: $INSTALLED (esperada $XCODEGEN_VERSION)"
+          if [ "$INSTALLED" != "$XCODEGEN_VERSION" ]; then
+            # No se falla: XcodeGen es estable entre versiones menores y bloquear
+            # el pipeline por esto sería desproporcionado. Pero queda registrado.
+            echo "::warning::XcodeGen $INSTALLED difiere de la version fijada $XCODEGEN_VERSION."
+          fi
           xcodegen --version | tee "$ARTIFACTS/logs/xcodegen-version.txt"
 
-      - name: Instalar SwiftFormat y SwiftLint
+      - name: Instalar SwiftFormat y SwiftLint (versiones fijadas)
         run: |
-          brew install swiftformat swiftlint
-          swiftformat --version
-          swiftlint --version
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tools"
+
+          # Se descargan los binarios oficiales de cada release en lugar de usar
+          # Homebrew: `brew install` instala la última versión disponible ese día,
+          # y una regla nueva de SwiftFormat rompería el build sin que nadie
+          # hubiera tocado el código.
+          echo "== SwiftFormat $SWIFTFORMAT_VERSION =="
+          curl -sSL --retry 3 -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip"
+          unzip -q -o "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/tools"
+          chmod +x "$RUNNER_TEMP/tools/swiftformat"
+          echo "$RUNNER_TEMP/tools" >> "$GITHUB_PATH"
+
+          echo "== SwiftLint $SWIFTLINT_VERSION =="
+          curl -sSL --retry 3 -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/${SWIFTLINT_VERSION}/portable_swiftlint.zip"
+          unzip -q -o "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/tools"
+          chmod +x "$RUNNER_TEMP/tools/swiftlint"
+
+      - name: Comprobar que las versiones son las esperadas
+        run: |
+          set -euo pipefail
+          SF=$(swiftformat --version)
+          SL=$(swiftlint --version)
+          echo "SwiftFormat: $SF (esperada $SWIFTFORMAT_VERSION)"
+          echo "SwiftLint:   $SL (esperada $SWIFTLINT_VERSION)"
+          [ "$SF" = "$SWIFTFORMAT_VERSION" ] || { echo "ERROR: version de SwiftFormat distinta a la fijada."; exit 1; }
+          [ "$SL" = "$SWIFTLINT_VERSION" ]   || { echo "ERROR: version de SwiftLint distinta a la fijada."; exit 1; }
+          # La configuración declara la versión en su cabecera: si alguien cambia
+          # una sin la otra, el pipeline lo dice aquí y no veinte pasos después.
+          grep -q "VERSIÓN FIJADA: $SWIFTFORMAT_VERSION" .swiftformat \
+            || { echo "ERROR: .swiftformat no declara la version $SWIFTFORMAT_VERSION."; exit 1; }
+          echo "OK: herramientas alineadas."
 
       - name: Generar FERNE.xcodeproj
         run: |
@@ -240,11 +282,39 @@ jobs:
           exit 0
 
       - name: Empaquetar FERNE.app para Appetize
+        id: package
+        # `always()` para que también se ejecute cuando un paso anterior falló: así
+        # se deja constancia escrita de POR QUÉ no hay app, en lugar de un artifact
+        # ausente sin explicación.
+        if: always()
         env:
           SIM_NAME: ${{ steps.simulator.outputs.sim_name }}
           SIM_OS: ${{ steps.simulator.outputs.sim_os }}
         run: |
           set -o pipefail
+          mkdir -p "$ARTIFACTS/app"
+
+          APP_PATH=$(find "$DERIVED_DATA/Build/Products" -name 'FERNE.app' -type d 2>/dev/null | head -1 || true)
+
+          if [ -z "$APP_PATH" ]; then
+            # La compilación no llegó a producir la app. Esto NO es un fallo nuevo:
+            # es la consecuencia del fallo real, que ya está reportado más arriba.
+            echo "packaged=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "FERNE.app NO SE GENERO"
+              echo ""
+              echo "Motivo: la compilacion no se completo, asi que no hay bundle que empaquetar."
+              echo "Este NO es el error original. Busca el primer paso en rojo de este job."
+              echo ""
+              echo "Commit    : ${GITHUB_SHA:-desconocido}"
+              echo "Ejecucion : ${GITHUB_RUN_NUMBER:-desconocida}"
+              echo "Fecha     : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            } | tee "$ARTIFACTS/app/NO-SE-GENERO.txt"
+            echo "::warning title=FERNE.app no generada::La compilacion no se completo. El error real esta en un paso anterior."
+            exit 0
+          fi
+
+          echo "packaged=true" >> "$GITHUB_OUTPUT"
           bash Scripts/ci/package-simulator-app.sh "$DERIVED_DATA" "$ARTIFACTS/app" \
             2>&1 | tee "$ARTIFACTS/logs/package.log"
 
@@ -253,16 +323,19 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Artifact · app de simulador
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-simulator-app
           path: ${{ env.ARTIFACTS }}/app/
           retention-days: 30
-          if-no-files-found: error
+          # `warn` y no `error`: cuando la compilación falla, este artifact contiene
+          # NO-SE-GENERO.txt explicando la causa. Un `error` aquí añadiría un segundo
+          # fallo en rojo que competiría por la atención con el fallo real.
+          if-no-files-found: warn
 
       - name: Artifact · resultados de pruebas
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-test-results
           path: ${{ env.ARTIFACTS }}/tests/
@@ -271,7 +344,7 @@ jobs:
 
       - name: Artifact · cobertura
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-code-coverage
           path: ${{ env.ARTIFACTS }}/coverage/
@@ -280,7 +353,7 @@ jobs:
 
       - name: Artifact · logs de compilación
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-build-logs
           path: ${{ env.ARTIFACTS }}/logs/
@@ -296,7 +369,16 @@ jobs:
             echo "| Elemento | Valor |"
             echo "|---|---|"
             echo "| Simulador | ${{ steps.simulator.outputs.sim_name }} (iOS ${{ steps.simulator.outputs.sim_os }}) |"
+            echo "| SwiftFormat | ${{ env.SWIFTFORMAT_VERSION }} |"
+            echo "| SwiftLint | ${{ env.SWIFTLINT_VERSION }} |"
+            echo "| FERNE.app | ${{ steps.package.outputs.packaged == 'true' && 'generada' || 'NO generada' }} |"
             echo "| Estado | ${{ job.status }} |"
+            if [ "${{ steps.package.outputs.packaged }}" != "true" ]; then
+              echo ""
+              echo "> **FERNE.app no se generó porque la compilación no se completó.**"
+              echo "> Eso es una consecuencia, no la causa. El error real está en el primer"
+              echo "> paso en rojo de este job; el artifact \`FERNE-build-logs\` lo contiene."
+            fi
             echo ""
             echo "Descarga los artifacts desde la pestaña **Summary** de esta ejecución."
             echo ""
@@ -343,7 +425,7 @@ jobs:
         device: ${{ fromJSON(needs.screenshot-matrix.outputs.devices) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Seleccionar Xcode
         run: |
@@ -424,7 +506,7 @@ jobs:
 
       - name: Artifact · capturas de este dispositivo
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-screenshots-${{ strategy.job-index }}
           path: ${{ env.ARTIFACTS }}/screenshots/
@@ -433,7 +515,7 @@ jobs:
 
       - name: Artifact · logs de capturas
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-screenshot-logs-${{ strategy.job-index }}
           path: ${{ env.ARTIFACTS }}/logs/
@@ -451,10 +533,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Descargar capturas de todos los dispositivos
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: FERNE-screenshots-*
           path: collected
@@ -468,7 +550,7 @@ jobs:
           cp docs/VISUAL_QA_MATRIX.md artifacts/screenshots/ 2>/dev/null || true
 
       - name: Artifact · capturas (unificado)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FERNE-screenshots
           path: artifacts/screenshots/

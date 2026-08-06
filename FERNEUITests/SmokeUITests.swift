@@ -12,8 +12,10 @@ final class SmokeUITests: XCTestCase {
         app.launch()
 
         // El splash dura 2–3 s; damos margen.
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10),
-                      "La barra de pestañas debe aparecer tras el splash.")
+        XCTAssertTrue(
+            app.tabBars.firstMatch.waitForExistence(timeout: 10),
+            "La barra de pestañas debe aparecer tras el splash."
+        )
 
         for title in ["Inicio", "Progreso", "Destellos", "Perfil"] {
             XCTAssertTrue(app.tabBars.buttons[title].exists, "Falta la pestaña \(title).")

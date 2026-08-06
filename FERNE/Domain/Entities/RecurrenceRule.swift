@@ -11,10 +11,10 @@ public struct RecurrenceRule: Codable, Hashable, Sendable {
 
         public var displayName: String {
             switch self {
-            case .diaria:         "Cada día"
-            case .semanal:        "Cada semana"
-            case .mensual:        "Cada mes"
-            case .personalizada:  "Días específicos"
+            case .diaria: "Cada día"
+            case .semanal: "Cada semana"
+            case .mensual: "Cada mes"
+            case .personalizada: "Días específicos"
             }
         }
     }
@@ -35,7 +35,7 @@ public struct RecurrenceRule: Codable, Hashable, Sendable {
     ) {
         self.frequency = frequency
         self.interval = max(1, interval)
-        self.weekdays = weekdays.filter { (1...7).contains($0) }
+        self.weekdays = weekdays.filter { (1 ... 7).contains($0) }
         self.endDate = endDate
     }
 
@@ -44,7 +44,9 @@ public struct RecurrenceRule: Codable, Hashable, Sendable {
 
     /// ¿Corresponde esta regla a la fecha indicada, partiendo de `anchor`?
     public func occurs(on date: Date, anchor: Date, calendar: Calendar) -> Bool {
-        if let endDate, date > endDate { return false }
+        if let endDate, date > endDate {
+            return false
+        }
         let startDay = calendar.startOfDay(for: anchor)
         let targetDay = calendar.startOfDay(for: date)
         guard targetDay >= startDay else { return false }

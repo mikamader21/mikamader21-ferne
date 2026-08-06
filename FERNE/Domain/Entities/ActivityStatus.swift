@@ -18,17 +18,19 @@ public enum ActivityStatus: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var countsAsCompleted: Bool { self == .completada }
+    public var countsAsCompleted: Bool {
+        self == .completada
+    }
 
     /// Texto amable. Prohibido el vocabulario punitivo (§9.3).
     public var displayName: String {
         switch self {
-        case .programada:   "Programada"
-        case .completada:   "Completada"
-        case .pendiente:    "Pendiente"
+        case .programada: "Programada"
+        case .completada: "Completada"
+        case .pendiente: "Pendiente"
         case .reprogramada: "Reprogramada"
-        case .omitida:      "Sin marcar"
-        case .cancelada:    "Cancelada"
+        case .omitida: "Sin marcar"
+        case .cancelada: "Cancelada"
         }
     }
 }

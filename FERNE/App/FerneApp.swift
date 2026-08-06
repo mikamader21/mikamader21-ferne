@@ -17,7 +17,9 @@ struct FerneApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             // La franja horaria puede haber cambiado mientras la app estaba en segundo plano.
-            if newPhase == .active { theme.refresh() }
+            if newPhase == .active {
+                theme.refresh()
+            }
         }
     }
 }

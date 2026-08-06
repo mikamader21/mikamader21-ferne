@@ -12,7 +12,7 @@ public enum ScoreLanguage {
         "insuficiente", "deficiente",
         "perezosa", "perezoso", "floja", "flojo",
         "incumpliste", "fallaste", "fallo", "culpa",
-        "vergüenza", "castigo", "penalización"
+        "vergüenza", "castigo", "penalización",
     ]
 
     /// `true` si el texto contiene vocabulario punitivo.

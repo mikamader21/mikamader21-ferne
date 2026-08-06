@@ -2,9 +2,9 @@ import Foundation
 import XCTest
 
 #if canImport(FERNE)
-@testable import FERNE
+    @testable import FERNE
 #else
-@testable import FerneDomain
+    @testable import FerneDomain
 #endif
 
 /// Utilidades compartidas por las pruebas de dominio.
