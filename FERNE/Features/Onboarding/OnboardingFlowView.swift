@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 
 /// Onboarding paginado. Solo aparece en el primer ingreso: al terminar se guarda
 /// `hasCompletedOnboarding` y no vuelve a mostrarse. Todo es editable desde Perfil.
@@ -266,14 +265,10 @@ struct OnboardingFlowView: View {
 
     private func requestNotifications() async {
         preferences.notificationsRequested = true
-        do {
-            let granted = try await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound, .badge])
-            notificationOutcome = granted ? .granted : .denied
-        } catch {
-            FerneLog.notifications.error("Fallo al pedir permiso de notificaciones")
-            notificationOutcome = .denied
-        }
+        // El scheduler encapsula la API de Apple y devuelve un `Bool`: aquí no
+        // aparece ningún tipo de UserNotifications.
+        let granted = await NotificationScheduler().requestAuthorization()
+        notificationOutcome = granted ? .granted : .denied
     }
 }
 

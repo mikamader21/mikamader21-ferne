@@ -170,6 +170,23 @@ public struct NotificationScheduler {
         return duplicated.sorted()
     }
 
+    /// Pide el permiso de notificaciones. Devuelve `Bool`, no un tipo de Apple.
+    ///
+    /// La variante async de `requestAuthorization` cruza el mismo límite que
+    /// `add`, así que se usa igualmente su versión con completion handler.
+    public func requestAuthorization() async -> Bool {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                if let error {
+                    FerneLog.notifications.error("Fallo al pedir permiso: \(error.localizedDescription, privacy: .public)")
+                    continuation.resume(returning: false)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+    }
+
     public func isAuthorized() async -> Bool {
         let health = await health()
         return health.authorization.allowsDelivery
@@ -224,9 +241,32 @@ public struct NotificationScheduler {
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
         do {
-            try await center.add(request)
+            // `center.add(request)` en su variante async devuelve tras un `await`,
+            // y eso obliga a `UNNotificationRequest` a cruzar el límite de
+            // aislamiento. Con el wrapper de completion handler, la petición se
+            // queda en el contexto donde se creó.
+            try await submit(request)
         } catch {
             FerneLog.notifications.error("No se pudo programar \(id, privacy: .public)")
+        }
+    }
+
+    /// Da de alta una petición sin que ningún objeto de UserNotifications atraviese
+    /// un límite de aislamiento.
+    ///
+    /// `center.add` se invoca **en el mismo contexto** donde se construyó `request`.
+    /// El completion handler captura únicamente la continuación —ni `center`, ni
+    /// `request`, ni ningún tipo de Apple— y la reanuda **exactamente una vez**:
+    /// lanzando si hubo error, con `Void` si no.
+    private func submit(_ request: UNNotificationRequest) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            center.add(request) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
         }
     }
 
