@@ -55,7 +55,7 @@ import Foundation
                     status: .completada,
                     completedAt: at(11, 5)
                 ),
-                ActivitySnapshot(title: "Almuerzo", category: .comida, startDate: at(13, 0), status: .pendiente),
+                ActivitySnapshot(title: "Almuerzo", category: .comida, startDate: at(13, 0), status: .programada),
                 ActivitySnapshot(
                     title: "TikTok Live",
                     category: .live,
@@ -91,7 +91,7 @@ import Foundation
                         title: "Almuerzo",
                         category: .comida,
                         startDate: at(13, 0, dayOffset: dayOffset),
-                        status: dayOffset % 2 == 0 ? .completada : .pendiente
+                        status: dayOffset % 2 == 0 ? .completada : .omitida
                     ),
                     ActivitySnapshot(
                         title: "Lectura",

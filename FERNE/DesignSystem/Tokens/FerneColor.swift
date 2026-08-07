@@ -193,13 +193,25 @@ public enum FerneColor {
         }
     }
 
+    /// Color de cada estado. Exhaustivo y sin `default`: si mañana se añade un
+    /// estado, el compilador obliga a decidir su color en lugar de heredar uno
+    /// genérico por descuido.
     public static func statusTint(_ status: ActivityStatus) -> Color {
         switch status {
-        case .completada: successSoft
-        case .pendiente: attentionAmber
-        case .reprogramada: softPink
+        // Informativos: aún puede pasar cualquier cosa.
         case .programada: secondaryPlum
+        case .proxima: softPink
+        // En marcha: dorado, el color de lo que está ocurriendo.
+        case .enCurso: sunGold
+        // Resultados confirmados.
+        case .completada: successSoft
+        case .parcial: attentionAmber
         case .omitida: roseGray
+        // Movida: atención amable, nunca reproche.
+        case .reprogramada: softPink
+        // Espera una respuesta de Fer.
+        case .sinConfirmar: attentionAmber
+        // Anulada: neutro, ya no participa.
         case .cancelada: roseGray
         }
     }

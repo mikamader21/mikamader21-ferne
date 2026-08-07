@@ -96,48 +96,105 @@ public struct NotificationScheduler {
     }
 
     /// Elimina lo que quedó de actividades que ya no existen.
+    ///
+    /// Solo cruzan el límite de aislamiento **identificadores**: los
+    /// `UNNotificationRequest` se descartan dentro del callback.
     public func reconcile(with liveIDs: Set<UUID>) async {
-        let pending = await center.pendingNotificationRequests()
-        let orphaned = pending
-            .map(\.identifier)
-            .filter { identifier in
-                guard let uuidPart = identifier.split(separator: "#").first,
-                      let uuid = UUID(uuidString: String(uuidPart))
-                else { return true }
-                return !liveIDs.contains(uuid)
-            }
+        let identifiers = await pendingIdentifiers()
+        let orphaned = identifiers.filter { identifier in
+            guard let uuidPart = identifier.split(separator: "#").first,
+                  let uuid = UUID(uuidString: String(uuidPart))
+            else { return true }
+            return !liveIDs.contains(uuid)
+        }
         guard !orphaned.isEmpty else { return }
         center.removePendingNotificationRequests(withIdentifiers: orphaned)
         FerneLog.notifications.info("Reconciliación: \(orphaned.count, privacy: .public) alertas huérfanas eliminadas")
     }
 
-    // MARK: - Estado
+    // MARK: - Consultas
 
-    public func isAuthorized() async -> Bool {
-        let settings = await center.notificationSettings()
-        return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+    //
+    // `UNNotificationRequest` y `UNNotificationSettings` no son `Sendable`, así que
+    // ninguna de estas funciones los devuelve. La API de completion handler permite
+    // convertirlos en valores `Sendable` **dentro** del callback; solo eso sale por
+    // la continuación, que se reanuda exactamente una vez.
+
+    /// Identificadores de todas las alertas pendientes.
+    public func pendingIdentifiers() async -> [String] {
+        let center = center
+        return await withCheckedContinuation { continuation in
+            center.getPendingNotificationRequests { requests in
+                continuation.resume(returning: requests.map(\.identifier))
+            }
+        }
     }
 
-    /// Estado real del sistema, para el centro de salud. **La UI no debe prometer
-    /// entrega sin consultar esto** (§8.1).
-    public func currentSettings() async -> UNNotificationSettings {
-        await center.notificationSettings()
-    }
-
+    /// Cuántas alertas hay pendientes. El recuento se hace dentro del callback.
     public func pendingCount() async -> Int {
-        await center.pendingNotificationRequests().count
+        let center = center
+        return await withCheckedContinuation { continuation in
+            center.getPendingNotificationRequests { requests in
+                continuation.resume(returning: requests.count)
+            }
+        }
     }
 
     /// La próxima alerta programada, con su fecha real de disparo.
+    /// Sale una tupla de `String` y `Date`, ambos `Sendable`.
     public func nextScheduled() async -> (identifier: String, date: Date)? {
-        let pending = await center.pendingNotificationRequests()
-        let dated = pending.compactMap { request -> (String, Date)? in
-            guard let trigger = request.trigger as? UNCalendarNotificationTrigger,
-                  let date = trigger.nextTriggerDate()
-            else { return nil }
-            return (request.identifier, date)
+        let center = center
+        return await withCheckedContinuation { continuation in
+            center.getPendingNotificationRequests { requests in
+                let dated: [(String, Date)] = requests.compactMap { request in
+                    guard let trigger = request.trigger as? UNCalendarNotificationTrigger,
+                          let date = trigger.nextTriggerDate()
+                    else { return nil }
+                    return (request.identifier, date)
+                }
+                let earliest = dated.min { $0.1 < $1.1 }
+                continuation.resume(returning: earliest.map { (identifier: $0.0, date: $0.1) })
+            }
         }
-        return dated.min { $0.1 < $1.1 }
+    }
+
+    /// Alertas duplicadas: mismo identificador más de una vez.
+    /// Se comparan **solo identificadores**, nunca los objetos.
+    public func duplicatedIdentifiers() async -> [String] {
+        let identifiers = await pendingIdentifiers()
+        var seen = Set<String>()
+        var duplicated = Set<String>()
+        for identifier in identifiers where !seen.insert(identifier).inserted {
+            duplicated.insert(identifier)
+        }
+        return duplicated.sorted()
+    }
+
+    public func isAuthorized() async -> Bool {
+        let health = await health()
+        return health.authorization.allowsDelivery
+    }
+
+    /// Estado real del sistema para el centro de salud, ya proyectado a valores
+    /// `Sendable`. **La UI no debe prometer entrega sin consultar esto** (§8.1).
+    public func health() async -> NotificationHealth {
+        let center = center
+        return await withCheckedContinuation { continuation in
+            center.getNotificationSettings { settings in
+                // La conversión ocurre aquí dentro: el `UNNotificationSettings`
+                // nunca sale del callback.
+                continuation.resume(
+                    returning: NotificationHealth(
+                        authorization: .init(settings.authorizationStatus),
+                        alertsEnabled: settings.alertSetting == .enabled,
+                        soundEnabled: settings.soundSetting == .enabled,
+                        badgeEnabled: settings.badgeSetting == .enabled,
+                        timeSensitiveEnabled: settings.timeSensitiveSetting == .enabled,
+                        scheduledSummaryEnabled: settings.scheduledDeliverySetting == .enabled
+                    )
+                )
+            }
+        }
     }
 
     // MARK: - Interno
