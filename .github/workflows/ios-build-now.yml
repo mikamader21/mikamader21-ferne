@@ -45,20 +45,71 @@ jobs:
       - name: Generar FERNE.xcodeproj
         run: xcodegen generate
 
-      - name: Compilar para iOS Simulator
+      - name: Resolver simulador
+        id: simulator
+        run: |
+          mkdir -p artifacts
+          bash Scripts/ci/resolve-simulator.sh 'iPhone 16 Pro' 2>&1 | tee artifacts/simulator.log
+
+      - name: Compilar para pruebas
         id: build
         run: |
           set -o pipefail
-          mkdir -p artifacts
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project FERNE.xcodeproj \
             -scheme FERNE \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             2>&1 | tee artifacts/xcodebuild.log
+
+      # -----------------------------------------------------------------------
+      # Los cuatro escenarios de ejecución. Si la app se cierra, este paso falla
+      # y NO se empaqueta nada: compilar no demuestra que la app se mantenga viva.
+      # -----------------------------------------------------------------------
+      - name: Smoke de ejecución (4 escenarios)
+        id: smoke
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/tests
+          xcodebuild test-without-building \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath build/DerivedData \
+            -only-testing:FERNEUITests/RuntimeSmokeUITests \
+            -resultBundlePath artifacts/tests/runtime-smoke.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee artifacts/runtime-smoke.log
+
+      - name: Recopilar diagnósticos
+        if: always()
+        run: |
+          bash Scripts/ci/collect-diagnostics.sh artifacts/diagnostics \
+            2>&1 | tee artifacts/diagnostics.log || true
+
+      - name: Resultado del smoke
+        if: always()
+        run: |
+          {
+            echo "### Smoke de ejecución"
+            echo ""
+            if [ "${{ steps.smoke.outcome }}" = "success" ]; then
+              echo "Los cuatro escenarios pasaron. Se empaqueta \`FERNE.app\`."
+            else
+              echo "**Algún escenario falló. NO se publica \`FERNE-app-now\`.**"
+              echo ""
+              echo "El motivo exacto —página, acción, último elemento y estado de"
+              echo "XCUIApplication— está en \`FERNE-runtime-smoke-results\`."
+              echo ""
+              echo '```'
+              grep -E "Estado de XCUIApplication|Página exacta|Acción exacta|Último elemento|error:|failed" \
+                artifacts/runtime-smoke.log 2>/dev/null | head -25 || echo "(sin detalle en el log)"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Primer error de Xcode
         if: always()
@@ -84,6 +135,9 @@ jobs:
           fi
 
       - name: Localizar y empaquetar FERNE.app
+        # Solo si los cuatro escenarios pasaron. Un artifact que se cierra al
+        # abrirlo es peor que no tener artifact.
+        if: steps.smoke.outcome == 'success'
         run: |
           set -euo pipefail
           APP_PATH=$(find build/DerivedData/Build/Products -name 'FERNE.app' -type d 2>/dev/null | head -1 || true)
@@ -117,12 +171,34 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Artifact · FERNE.app
+        if: steps.smoke.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: FERNE-app-now
           path: artifacts/app/FERNE-simulator.zip
           retention-days: 30
           if-no-files-found: error
+
+      - name: Artifact · resultados del smoke
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-runtime-smoke-results
+          path: |
+            artifacts/tests/
+            artifacts/runtime-smoke.log
+            artifacts/simulator.log
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Artifact · crash logs y diagnósticos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FERNE-runtime-crash-logs
+          path: artifacts/diagnostics/
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Artifact · log de Xcode
         if: always()

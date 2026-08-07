@@ -41,6 +41,7 @@ struct MainTabView: View {
                 .tabItem {
                     Label(tab.title, systemImage: tab.symbol)
                 }
+                .accessibilityIdentifier("tab.\(tab.rawValue)")
                 .tag(tab)
             }
         }

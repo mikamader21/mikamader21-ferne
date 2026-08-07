@@ -27,8 +27,18 @@ public final class UserPreferences {
 
     private let defaults: UserDefaults
 
-    public init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    public init(defaults: UserDefaults? = nil) {
+        if let defaults {
+            self.defaults = defaults
+        } else if UITestConfiguration.isRuntimeSmoke,
+                  let suite = UserDefaults(suiteName: UITestConfiguration.runtimeSmokeSuiteName)
+        {
+            // Suite aislada: los ajustes del smoke no tocan los reales y pueden
+            // borrarse por completo entre escenarios.
+            self.defaults = suite
+        } else {
+            self.defaults = .standard
+        }
     }
 
     // MARK: - Onboarding
@@ -39,6 +49,9 @@ public final class UserPreferences {
             // poder capturarlo sin depender del estado previo del simulador.
             if UITestConfiguration.resetsOnboarding {
                 return false
+            }
+            if UITestConfiguration.skipsOnboarding {
+                return true
             }
             return defaults.bool(forKey: Key.hasCompletedOnboarding)
         }

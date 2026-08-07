@@ -101,6 +101,7 @@ public struct FerneFloatingActionButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Agregar")
         .accessibilityHint("Abre el menú para crear una actividad")
+        .accessibilityIdentifier("home.fab")
     }
 }
 

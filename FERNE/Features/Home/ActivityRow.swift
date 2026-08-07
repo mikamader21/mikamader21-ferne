@@ -77,6 +77,7 @@ struct ActivityRow: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("activity.row.\(activity.category.rawValue)")
         .accessibilityLabel("\(activity.title), \(activity.category.displayName), \(timeRange)")
         .accessibilityValue(activity.status.displayName)
     }

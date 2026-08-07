@@ -48,6 +48,7 @@ struct ActivityEditorView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Guardar") { save() }
                     .disabled(!canSave)
+                    .accessibilityIdentifier("editor.save")
             }
         }
         .onAppear(perform: applyDefaults)

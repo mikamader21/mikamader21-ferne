@@ -9,12 +9,51 @@ import SwiftData
 public enum ModelContainerFactory {
     public static func make() -> ModelContainer {
         #if DEBUG
+            // El modo smoke va PRIMERO: necesita un almacén real en disco para que
+            // la persistencia entre lanzamientos sea comprobable, y jamás datos
+            // sembrados. Con fixtures no se probaría nada.
+            if UITestConfiguration.isRuntimeSmoke {
+                return makeIsolatedStore()
+            }
             if UITestConfiguration.isActive {
                 return makeSeededInMemory()
             }
         #endif
         return makePersistent()
     }
+
+    #if DEBUG
+        /// Almacén aislado en disco para las pruebas de humo.
+        ///
+        /// `-FERNEResetStore` lo borra **antes** de abrirlo; sin ese argumento se
+        /// reutiliza, que es lo que permite comprobar que los datos sobreviven a un
+        /// relanzamiento.
+        private static func makeIsolatedStore() -> ModelContainer {
+            guard let url = UITestConfiguration.runtimeSmokeStoreURL else {
+                return makeEmptyInMemory()
+            }
+            if UITestConfiguration.resetsStore {
+                let manager = FileManager.default
+                for suffix in ["", "-shm", "-wal"] {
+                    let path = URL(fileURLWithPath: url.path + suffix)
+                    try? manager.removeItem(at: path)
+                }
+                UserDefaults.standard
+                    .removePersistentDomain(forName: UITestConfiguration.runtimeSmokeSuiteName)
+            }
+            let configuration = ModelConfiguration(schema: Schema(FerneSchemaV1.models), url: url)
+            do {
+                return try ModelContainer(
+                    for: Schema(FerneSchemaV1.models),
+                    migrationPlan: FerneMigrationPlan.self,
+                    configurations: configuration
+                )
+            } catch {
+                FerneLog.data.error("Almacén aislado inaccesible: \(error.localizedDescription, privacy: .public)")
+                return makeEmptyInMemory()
+            }
+        }
+    #endif
 
     /// Contenedor real, en disco. Sin CloudKit por ahora: el respaldo es opcional
     /// y activarlo obliga a que todas las propiedades tengan valor por defecto.

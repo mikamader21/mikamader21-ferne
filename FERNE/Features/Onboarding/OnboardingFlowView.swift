@@ -22,6 +22,8 @@ struct OnboardingFlowView: View {
         case notAsked
         case granted
         case denied
+        /// Fer decidió no activarlos ahora. Distinto de que iOS los deniegue.
+        case skipped
     }
 
     var body: some View {
@@ -43,6 +45,9 @@ struct OnboardingFlowView: View {
                     finalPage.tag(6)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                // El número de página se expone para que un fallo en pruebas pueda
+                // decir exactamente en qué paso ocurrió.
+                .accessibilityIdentifier("onboarding.page.\(page)")
 
                 controls
                     .padding(.horizontal, FerneSpacing.screenHorizontal)
@@ -73,6 +78,7 @@ struct OnboardingFlowView: View {
         OnboardingPage(title: "Hola ✨", subtitle: "¿Cómo quieres que te llame?") {
             FerneCard {
                 TextField("Fer", text: $draft.name)
+                    .accessibilityIdentifier("onboarding.nameField")
                     .font(FerneFont.greeting)
                     .foregroundStyle(FerneColor.brandMagenta)
                     .textInputAutocapitalization(.words)
@@ -182,6 +188,20 @@ struct OnboardingFlowView: View {
                     Task { await requestNotifications() }
                 }
                 .buttonStyle(.fernePrimary)
+                .accessibilityIdentifier("onboarding.enableNotifications")
+                Button("Ahora no") {
+                    // Omitir es una decisión legítima, no un descuido: merece su
+                    // propio botón en lugar de esconderse tras "Continuar".
+                    notificationOutcome = .skipped
+                    Haptics.shared.tap(.soft)
+                }
+                .buttonStyle(.ferneSecondary)
+                .accessibilityIdentifier("onboarding.skipNotifications")
+            case .skipped:
+                Label("Sin recordatorios por ahora", systemImage: "bell.slash")
+                    .font(FerneFont.cardTitle)
+                    .foregroundStyle(FerneColor.textSecondary)
+                    .frame(minHeight: FerneSize.minimumTapTarget)
             case .granted:
                 Label("Recordatorios activados", systemImage: "checkmark.circle.fill")
                     .font(FerneFont.cardTitle)
@@ -223,6 +243,7 @@ struct OnboardingFlowView: View {
             }
             .buttonStyle(.fernePrimary)
             .disabled(page == 0 && draft.resolvedName.isEmpty)
+            .accessibilityIdentifier(page == lastPage ? "onboarding.finish" : "onboarding.advance")
 
             if page > 0, page < lastPage {
                 Button("Atrás") {
@@ -349,6 +370,7 @@ private struct CategoryChoiceCard: View {
             .animation(reduceMotion ? nil : FerneMotion.elasticCheck, value: isSelected)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("onboarding.category.\(category.rawValue)")
         .accessibilityLabel(category.displayName)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
