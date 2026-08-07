@@ -2,20 +2,18 @@ import XCTest
 
 /// Pruebas de humo en tiempo de ejecucion.
 ///
-/// Los textos van sin acentos ni caracteres de dibujo a proposito: el log de
-/// GitHub Actions los rompia y el diagnostico quedaba ilegible justo cuando mas
-/// falta hacia.
+/// Textos sin acentos a proposito: el log de GitHub Actions los rompia.
 ///
-/// Dos correcciones de diseno respecto a la version anterior, que fallo cuatro de
-/// cuatro sin llegar a tocar la interfaz:
+/// **Por que esta version no busca pantallas.** El diagnostico por `simctl`
+/// (run 31158125780) demostro que la app arranca, se mantiene viva con el mismo
+/// PID a los 5 y 15 s, y muestra la primera pagina del onboarding. Lo que fallaba
+/// era XCTest buscando anclas `screen.*`: SwiftUI no publica esos contenedores
+/// como elementos consultables, y `.accessibilityElement(children: .contain)`
+/// tampoco lo resolvio.
 ///
-/// 1. **Selectores agnosticos de tipo.** Los identificadores de pantalla se buscan
-///    con `descendants(matching: .any)`. SwiftUI no garantiza que un contenedor se
-///    publique como `.other`, y buscar solo ahi hacia que ninguna pantalla
-///    apareciera aunque estuviera en pantalla.
-/// 2. **El splash no es requisito.** Dura unos 2 s y la sesion de automatizacion
-///    tardo 76 s en establecerse: exigir verlo era pedir lo imposible. Se registra
-///    si aparece, nunca se exige.
+/// Por eso todo el recorrido se conduce por **controles reales** —botones, campos
+/// e interruptores— que la automatizacion siempre ve. Cero selectores de
+/// contenedor.
 ///
 /// Cada escenario usa su propio almacen (`FERNE_RUNTIME_TEST_ID`). A, B y C
 /// arrancan limpios; D comparte almacen entre sus dos lanzamientos.
@@ -24,18 +22,40 @@ final class RuntimeSmokeUITests: XCTestCase {
     private var currentTestID = ""
     private var currentReset = true
 
-    /// Un solo timeout por transicion. La version anterior encadenaba esperas de
-    /// 25 s + 30 s y consumia minutos buscando la primera pantalla.
+    /// Una sola espera inicial larga; las transiciones posteriores son cortas.
     private enum Timeout {
-        /// Primera pantalla tras `launch()`: incluye arranque en frio.
-        static let firstScreen: TimeInterval = 30
-        /// Transicion entre pantallas con la app ya viva.
+        /// Primer control tras `launch()`. Incluye arranque en frio.
+        static let launch: TimeInterval = 30
+        /// Cambio de pagina o de pantalla con la app ya viva.
         static let transition: TimeInterval = 15
-        /// Elemento dentro de una pantalla ya presente.
-        static let element: TimeInterval = 10
+        /// Control dentro de una pantalla ya presente.
+        static let control: TimeInterval = 10
         /// Dialogo del sistema, que puede no llegar a aparecer.
         static let systemDialog: TimeInterval = 8
     }
+
+    /// Control que identifica inequivocamente cada pagina del onboarding.
+    ///
+    /// | Pagina | Control | Que confirma |
+    /// |---|---|---|
+    /// | 0 | `onboarding.nameField` | campo del nombre |
+    /// | 1 | `onboarding.category.gym` | tarjetas de categoria |
+    /// | 2 | `onboarding.wakeReminder` | interruptor de despertar |
+    /// | 3 | `onboarding.meal.breakfast` | interruptor de desayuno |
+    /// | 4 | `onboarding.tone.dailyMessage` | interruptor de mensajes |
+    /// | 5 | `onboarding.skipNotifications` | pagina de recordatorios |
+    /// | 6 | `onboarding.ready` | pagina final |
+    private static let pageAnchors: [(page: Int, identifier: String, kind: ElementKind)] = [
+        (0, "onboarding.nameField", .textField),
+        (1, "onboarding.category.gym", .button),
+        (2, "onboarding.wakeReminder", .switchControl),
+        (3, "onboarding.meal.breakfast", .switchControl),
+        (4, "onboarding.tone.dailyMessage", .switchControl),
+        (5, "onboarding.skipNotifications", .button),
+        (6, "onboarding.ready", .any)
+    ]
+
+    private enum ElementKind { case button, textField, switchControl, any }
 
     override func setUp() {
         continueAfterFailure = false
@@ -47,10 +67,9 @@ final class RuntimeSmokeUITests: XCTestCase {
     @MainActor
     func testA_OnboardingWithoutNotificationsReachesHome() {
         let app = launch(testID: "A", resetStore: true)
-        noteSplashIfVisible(app)
-
         completeOnboarding(app, notifications: .skip)
         assertHomeIsUsable(app, scenario: "A · sin notificaciones")
+        assertStillAliveAfterSettling(app, scenario: "A")
     }
 
     // MARK: - B · Onboarding activando notificaciones
@@ -58,10 +77,9 @@ final class RuntimeSmokeUITests: XCTestCase {
     @MainActor
     func testB_OnboardingWithNotificationsReachesHome() {
         let app = launch(testID: "B", resetStore: true)
-        noteSplashIfVisible(app)
-
         completeOnboarding(app, notifications: .enable)
         assertHomeIsUsable(app, scenario: "B · con notificaciones")
+        assertStillAliveAfterSettling(app, scenario: "B")
     }
 
     // MARK: - C · Crear Gym y verlo en Progreso
@@ -74,18 +92,17 @@ final class RuntimeSmokeUITests: XCTestCase {
 
         createGym(in: app)
 
-        trail.step("comprobando la tarjeta en Inicio", page: "home")
-        let cardShown = screen(app, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
-        XCTAssertTrue(cardShown, diagnosis(app, "La actividad creada no aparecio en Inicio."))
+        trail.step("comprobando la fila creada", page: "home")
+        let rowShown = app.descendants(matching: .any)["activity.row.gym"]
+            .waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(rowShown, diagnosis(app, "La actividad creada no aparecio en Inicio."))
 
         trail.step("abriendo Progreso", page: "progress")
-        let progressTab = app.tabBars.buttons["Progreso"]
-        let tabShown = progressTab.waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(tabShown, diagnosis(app, "Falta la pestana Progreso."))
-        progressTab.tap()
+        tapProgressTab(app)
 
-        let progressShown = screen(app, "screen.progress").waitForExistence(timeout: Timeout.transition)
-        XCTAssertTrue(progressShown, diagnosis(app, "Progreso no se abrio."))
+        let summaryShown = app.descendants(matching: .any)["progress.summary"]
+            .waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(summaryShown, diagnosis(app, "Progreso no mostro su resumen."))
         assertAlive(app, "C: la app se cerro al abrir Progreso.")
     }
 
@@ -93,83 +110,67 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     @MainActor
     func testD_DataSurvivesRelaunch() {
-        // Primer lanzamiento: almacen limpio.
         let first = launch(testID: "D", resetStore: true)
         completeOnboarding(first, notifications: .skip)
         assertHomeIsUsable(first, scenario: "D · primer lanzamiento")
 
         createGym(in: first)
-        let created = screen(first, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
+        let created = first.descendants(matching: .any)["activity.row.gym"]
+            .waitForExistence(timeout: Timeout.transition)
         XCTAssertTrue(created, diagnosis(first, "La actividad no se creo en el primer lanzamiento."))
         first.terminate()
 
-        // Segundo lanzamiento: MISMO identificador, sin borrar. Es lo unico que
-        // demuestra que los datos sobreviven.
+        // Segundo lanzamiento: MISMO testID, sin reset.
         trail.step("relanzando con el mismo almacen", page: "relaunch")
         let second = launch(testID: "D", resetStore: false)
 
-        trail.step("esperando Inicio directamente", page: "home")
-        let homeShown = screen(second, "screen.home").waitForExistence(timeout: Timeout.firstScreen)
-        XCTAssertTrue(homeShown, diagnosis(second, "Tras relanzar no se llego a Inicio."))
+        trail.step("esperando Inicio sin pasar por el onboarding", page: "home")
+        let addShown = second.buttons["home.add"].waitForExistence(timeout: Timeout.launch)
+        XCTAssertTrue(addShown, diagnosis(second, "Tras relanzar no aparecio el boton + de Inicio."))
 
-        let onboardingBack = screen(second, "screen.onboarding").exists
-        XCTAssertFalse(onboardingBack, diagnosis(second, "El onboarding reaparecio: no se guardo que ya se completo."))
+        let onboardingBack = second.textFields["onboarding.nameField"].exists
+        XCTAssertFalse(onboardingBack, diagnosis(second, "El onboarding reaparecio tras relanzar."))
 
-        let survived = screen(second, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
+        let survived = second.descendants(matching: .any)["activity.row.gym"]
+            .waitForExistence(timeout: Timeout.transition)
         XCTAssertTrue(survived, diagnosis(second, "La actividad no sobrevivio al relanzamiento."))
-        assertAlive(second, "D: la app se cerro tras relanzar.")
-    }
-
-    // MARK: - Selectores
-
-    /// Busca un identificador **sin suponer su tipo**.
-    ///
-    /// Es la correccion central: SwiftUI publica un contenedor como `.other`,
-    /// `.group`, `.scrollView` u otro segun el caso, y buscar solo en
-    /// `otherElements` hacia que la pantalla nunca apareciera.
-    @MainActor
-    private func screen(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
-        app.descendants(matching: .any)[identifier]
-    }
-
-    /// El splash es opcional: si esta, se anota; si no, no pasa nada.
-    @MainActor
-    private func noteSplashIfVisible(_ app: XCUIApplication) {
-        if screen(app, "screen.splash").exists {
-            trail.step("splash visible (opcional)", page: "splash")
-        } else {
-            trail.step("splash no visible; se continua", page: "splash")
-        }
+        assertStillAliveAfterSettling(second, scenario: "D")
     }
 
     // MARK: - Onboarding
 
     private enum NotificationChoice { case enable, skip }
 
+    /// Recorre las siete paginas esperando el control real de cada una.
+    /// Sin sleeps y sin suponer indices: cada paso se confirma con un elemento.
     @MainActor
     private func completeOnboarding(_ app: XCUIApplication, notifications: NotificationChoice) {
-        trail.step("esperando el onboarding", page: "onboarding")
-        let shown = screen(app, "screen.onboarding").waitForExistence(timeout: Timeout.firstScreen)
-        XCTAssertTrue(shown, diagnosis(app, "El onboarding no aparecio en una instalacion limpia."))
+        for (index, anchor) in Self.pageAnchors.enumerated() {
+            let timeout = index == 0 ? Timeout.launch : Timeout.transition
+            trail.step("esperando '\(anchor.identifier)'", page: "onboarding.\(anchor.page)")
 
-        for page in 0 ... 6 {
-            trail.step("pagina \(page)", page: "onboarding.\(page)")
-            assertAlive(app, "La app se cerro en la pagina \(page) del onboarding.")
+            let element = element(app, anchor.identifier, kind: anchor.kind)
+            let ready = element.waitForExistence(timeout: timeout)
+            guard ready else {
+                XCTFail(diagnosis(app, "No aparecio '\(anchor.identifier)' en la pagina \(anchor.page)."))
+                return
+            }
+            trail.step("pagina \(anchor.page) confirmada", page: "onboarding.\(anchor.page)", element: anchor.identifier)
+            assertAlive(app, "La app se cerro en la pagina \(anchor.page).")
 
-            if page == 5 {
+            if anchor.page == 5 {
                 resolveNotifications(app, choice: notifications)
             }
 
-            let identifier = page == 6 ? "onboarding.finish" : "onboarding.advance"
-            let button = app.buttons[identifier]
-            let ready = button.waitForExistence(timeout: Timeout.element)
-            guard ready else {
-                XCTFail(diagnosis(app, "No aparecio '\(identifier)' en la pagina \(page)."))
+            let advance = app.buttons["onboarding.continue"]
+            let advanceReady = advance.waitForExistence(timeout: Timeout.control)
+            guard advanceReady else {
+                XCTFail(diagnosis(app, "No aparecio 'onboarding.continue' en la pagina \(anchor.page)."))
                 return
             }
-            trail.step("pulsando '\(identifier)'", page: "onboarding.\(page)", element: identifier)
-            button.tap()
-            assertAlive(app, "La app se cerro al pulsar '\(identifier)' en la pagina \(page).")
+            trail.step("pulsando 'onboarding.continue'", page: "onboarding.\(anchor.page)", element: "onboarding.continue")
+            advance.tap()
+            assertAlive(app, "La app se cerro al avanzar desde la pagina \(anchor.page).")
         }
     }
 
@@ -177,7 +178,7 @@ final class RuntimeSmokeUITests: XCTestCase {
     private func resolveNotifications(_ app: XCUIApplication, choice: NotificationChoice) {
         let identifier = choice == .skip ? "onboarding.skipNotifications" : "onboarding.enableNotifications"
         let button = app.buttons[identifier]
-        let ready = button.waitForExistence(timeout: Timeout.element)
+        let ready = button.waitForExistence(timeout: Timeout.control)
         guard ready else {
             trail.step("no aparecio '\(identifier)'; se continua", page: "onboarding.5")
             return
@@ -205,7 +206,7 @@ final class RuntimeSmokeUITests: XCTestCase {
                 if button.exists, button.isHittable {
                     trail.step("dialogo del sistema: '\(label)'", page: "onboarding.5", element: label)
                     button.tap()
-                    _ = app.wait(for: .runningForeground, timeout: Timeout.element)
+                    _ = app.wait(for: .runningForeground, timeout: Timeout.control)
                     return
                 }
             }
@@ -214,53 +215,86 @@ final class RuntimeSmokeUITests: XCTestCase {
         trail.step("el dialogo del sistema no aparecio", page: "onboarding.5")
     }
 
+    // MARK: - Creacion de actividad
+
     @MainActor
     private func createGym(in app: XCUIApplication) {
-        trail.step("pulsando el boton +", page: "home")
-        let fab = app.buttons["home.fab"]
-        let fabReady = fab.waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(fabReady, diagnosis(app, "No se encontro el boton +."))
-        fab.tap()
+        trail.step("pulsando 'home.add'", page: "home", element: "home.add")
+        let add = app.buttons["home.add"]
+        let addReady = add.waitForExistence(timeout: Timeout.control)
+        XCTAssertTrue(addReady, diagnosis(app, "No se encontro 'home.add'."))
+        add.tap()
 
-        trail.step("esperando el menu de creacion", page: "addMenu")
-        let menuShown = screen(app, "screen.addMenu").waitForExistence(timeout: Timeout.transition)
-        XCTAssertTrue(menuShown, diagnosis(app, "El menu de creacion no se abrio."))
-
-        trail.step("eligiendo Gym", page: "addMenu")
+        trail.step("eligiendo 'addMenu.gym'", page: "addMenu", element: "addMenu.gym")
         let gym = app.buttons["addMenu.gym"]
-        let gymReady = gym.waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(gymReady, diagnosis(app, "No se encontro la categoria Gym."))
+        let gymReady = gym.waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(gymReady, diagnosis(app, "No se encontro 'addMenu.gym'."))
         gym.tap()
 
-        trail.step("esperando el editor", page: "editor")
-        let editorShown = screen(app, "screen.activityEditor").waitForExistence(timeout: Timeout.transition)
-        XCTAssertTrue(editorShown, diagnosis(app, "El editor de actividad no se abrio."))
+        trail.step("esperando el formulario", page: "editor", element: "activity.title")
+        let title = app.textFields["activity.title"]
+        let titleReady = title.waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(titleReady, diagnosis(app, "No aparecio 'activity.title'."))
 
-        trail.step("guardando", page: "editor")
-        let save = app.buttons["editor.save"]
-        let saveReady = save.waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(saveReady, diagnosis(app, "No se encontro el boton Guardar."))
+        trail.step("guardando", page: "editor", element: "activity.save")
+        let save = app.buttons["activity.save"]
+        let saveReady = save.waitForExistence(timeout: Timeout.control)
+        XCTAssertTrue(saveReady, diagnosis(app, "No se encontro 'activity.save'."))
         save.tap()
     }
 
     // MARK: - Comprobaciones
 
-    /// Llegar a Inicio **y que Inicio sea usable**. Estar en primer plano no basta:
-    /// una pantalla en blanco tambien lo estaria.
+    /// Inicio listo: boton + **y** pestaña Progreso **y** proceso vivo.
+    /// Los tres a la vez; estar en primer plano por si solo no dice nada.
     @MainActor
     private func assertHomeIsUsable(_ app: XCUIApplication, scenario: String) {
-        trail.step("esperando Inicio", page: "home")
-        let homeShown = screen(app, "screen.home").waitForExistence(timeout: Timeout.transition)
-        XCTAssertTrue(homeShown, diagnosis(app, "\(scenario): no se llego a Inicio."))
+        trail.step("esperando 'home.add'", page: "home", element: "home.add")
+        let addShown = app.buttons["home.add"].waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(addShown, diagnosis(app, "\(scenario): no aparecio el boton + de Inicio."))
 
-        let tabBarShown = app.tabBars.firstMatch.waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(tabBarShown, diagnosis(app, "\(scenario): Inicio sin barra de pestanas."))
-
-        let fabShown = app.buttons["home.fab"].waitForExistence(timeout: Timeout.element)
-        XCTAssertTrue(fabShown, diagnosis(app, "\(scenario): Inicio sin boton + utilizable."))
+        let progressReachable = progressTab(app).waitForExistence(timeout: Timeout.control)
+        XCTAssertTrue(progressReachable, diagnosis(app, "\(scenario): la pestaña Progreso no esta disponible."))
 
         assertAlive(app, "\(scenario): la app no estaba en primer plano.")
     }
+
+    /// El proceso sigue vivo despues de asentarse. Sin sleep fijo: se espera a un
+    /// control que debe seguir existiendo y luego se comprueba el estado.
+    @MainActor
+    private func assertStillAliveAfterSettling(_ app: XCUIApplication, scenario: String) {
+        trail.step("comprobando que Inicio sigue en pie", page: "home")
+        let stillThere = app.buttons["home.add"].waitForExistence(timeout: Timeout.control)
+        XCTAssertTrue(stillThere, diagnosis(app, "\(scenario): Inicio dejo de estar disponible."))
+        assertAlive(app, "\(scenario): la app se cerro despues de llegar a Inicio.")
+    }
+
+    /// La pestaña Progreso por identificador; si no lo publica, por su etiqueta.
+    @MainActor
+    private func progressTab(_ app: XCUIApplication) -> XCUIElement {
+        let byIdentifier = app.tabBars.buttons["tab.progress"]
+        return byIdentifier.exists ? byIdentifier : app.tabBars.buttons["Progreso"]
+    }
+
+    @MainActor
+    private func tapProgressTab(_ app: XCUIApplication) {
+        let tab = progressTab(app)
+        let ready = tab.waitForExistence(timeout: Timeout.control)
+        XCTAssertTrue(ready, diagnosis(app, "No se encontro la pestaña Progreso."))
+        tab.tap()
+    }
+
+    @MainActor
+    private func element(_ app: XCUIApplication, _ identifier: String, kind: ElementKind) -> XCUIElement {
+        switch kind {
+        case .button: app.buttons[identifier]
+        case .textField: app.textFields[identifier]
+        case .switchControl: app.switches[identifier]
+        case .any: app.descendants(matching: .any)[identifier]
+        }
+    }
+
+    // MARK: - Lanzamiento
 
     @MainActor
     private func launch(testID: String, resetStore: Bool) -> XCUIApplication {
@@ -292,11 +326,10 @@ final class RuntimeSmokeUITests: XCTestCase {
         XCTFail(diagnosis(app, message))
     }
 
-    /// Informe completo del punto de fallo, en ASCII para que el log de Actions no
-    /// lo rompa. Se adjunta al `.xcresult`.
+    /// Informe completo. Ya no se limita a `screen.*`: sabemos que no existen.
+    /// Enumera los controles reales que SI hay, que es lo que permite corregir.
     @MainActor
     private func diagnosis(_ app: XCUIApplication, _ message: String) -> String {
-        let visible = visibleScreenIdentifiers(app)
         let report = """
         ----------------------------------------
         \(message)
@@ -306,13 +339,30 @@ final class RuntimeSmokeUITests: XCTestCase {
         Estado XCUIApplication  : \(Self.describe(app.state))
         Pagina exacta           : \(trail.lastPage)
         Accion exacta           : \(trail.lastAction)
-        Ultimo elemento hallado : \(trail.lastElement)
-        Pantallas visibles      : \(visible.isEmpty ? "(ninguna)" : visible.joined(separator: ", "))
+        Ultimo elemento buscado : \(trail.lastElement)
+        ----------------------------------------
+        Botones (\(app.buttons.count)):
+        \(inventory(app.buttons))
+        ----------------------------------------
+        Campos de texto (\(app.textFields.count)):
+        \(inventory(app.textFields))
+        ----------------------------------------
+        Interruptores (\(app.switches.count)):
+        \(inventory(app.switches))
+        ----------------------------------------
+        Elementos con identificador conocido:
+        \(knownIdentifiers(app))
         ----------------------------------------
         Recorrido:
         \(trail.formatted)
         ----------------------------------------
         """
+
+        // El volcado completo va tambien al log, no solo al adjunto: en Actions es
+        // lo primero que se lee.
+        print(report)
+        print("--- app.debugDescription ---")
+        print(app.debugDescription)
 
         attach(string: report, named: "diagnostico")
         attach(string: app.debugDescription, named: "jerarquia-accesibilidad")
@@ -325,15 +375,29 @@ final class RuntimeSmokeUITests: XCTestCase {
         return report
     }
 
-    /// Qué identificadores `screen.*` hay realmente en pantalla. Es lo que dice si
-    /// el fallo fue de la app o del selector.
+    /// Identificador y etiqueta de cada elemento de una consulta.
     @MainActor
-    private func visibleScreenIdentifiers(_ app: XCUIApplication) -> [String] {
-        let known = [
-            "screen.splash", "screen.onboarding", "screen.home", "screen.progress",
-            "screen.sparks", "screen.profile", "screen.addMenu", "screen.activityEditor"
-        ]
-        return known.filter { screen(app, $0).exists }
+    private func inventory(_ query: XCUIElementQuery) -> String {
+        let elements = query.allElementsBoundByIndex.prefix(40)
+        guard !elements.isEmpty else { return "  (ninguno)" }
+        return elements.map { element in
+            let identifier = element.identifier.isEmpty ? "(sin id)" : element.identifier
+            let label = element.label.isEmpty ? "(sin label)" : element.label
+            return "  id='\(identifier)' label='\(label)'"
+        }.joined(separator: "\n")
+    }
+
+    /// Cuales de los identificadores que usa el smoke existen ahora mismo.
+    @MainActor
+    private func knownIdentifiers(_ app: XCUIApplication) -> String {
+        let prefixes = ["onboarding.", "home.", "activity.", "tab.", "progress."]
+        let found = app.descendants(matching: .any)
+            .allElementsBoundByIndex
+            .prefix(200)
+            .map(\.identifier)
+            .filter { identifier in prefixes.contains { identifier.hasPrefix($0) } }
+        let unique = Array(Set(found)).sorted()
+        return unique.isEmpty ? "  (ninguno)" : unique.map { "  \($0)" }.joined(separator: "\n")
     }
 
     @MainActor

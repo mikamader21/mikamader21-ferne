@@ -22,6 +22,17 @@ struct MainTabView: View {
             }
         }
 
+        /// Identificador estable para automatización. Independiente del rawValue
+        /// en español y del texto visible, que pueden cambiar.
+        var accessibilityID: String {
+            switch self {
+            case .inicio: "tab.home"
+            case .progreso: "tab.progress"
+            case .destellos: "tab.sparks"
+            case .perfil: "tab.profile"
+            }
+        }
+
         var symbol: String {
             switch self {
             case .inicio: "sun.horizon.fill"
@@ -40,8 +51,8 @@ struct MainTabView: View {
                 }
                 .tabItem {
                     Label(tab.title, systemImage: tab.symbol)
+                        .accessibilityIdentifier(tab.accessibilityID)
                 }
-                .accessibilityIdentifier("tab.\(tab.rawValue)")
                 .tag(tab)
             }
         }

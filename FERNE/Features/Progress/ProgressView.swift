@@ -83,10 +83,6 @@ struct ProgressView: View {
             }
             .scrollContentBackground(.hidden)
         }
-        // `.contain` publica el contenedor como nodo consultable sin ocultar
-        // sus hijos. Sin esto el identificador existe pero no hay elemento
-        // que lo lleve, y la automatización no puede encontrarlo.
-        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("screen.progress")
         .task { animateRing() }
     }
@@ -125,16 +121,24 @@ struct ProgressView: View {
                 .accessibilityLabel("Constancia semanal")
                 .accessibilityValue(weekly.hasData ? "\(weekly.displayScore) puntos" : "Todavía sin datos")
 
-                if weekly.hasData {
-                    Label(weekly.state.message, systemImage: "chart.line.uptrend.xyaxis")
-                        .font(FerneFont.cardTitle)
-                        .foregroundStyle(FerneColor.brandMagenta)
-                } else {
-                    Text("Tu progreso aparecerá cuando confirmes tus primeras actividades.")
-                        .font(FerneFont.body)
-                        .foregroundStyle(FerneColor.textSecondary)
-                        .multilineTextAlignment(.center)
+                Group {
+                    if weekly.hasData {
+                        Label(weekly.state.message, systemImage: "chart.line.uptrend.xyaxis")
+                            .font(FerneFont.cardTitle)
+                            .foregroundStyle(FerneColor.brandMagenta)
+                    } else {
+                        Text("Tu progreso aparecerá cuando confirmes tus primeras actividades.")
+                            .font(FerneFont.body)
+                            .foregroundStyle(FerneColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
+                // Texto visible convertido en elemento accesible: es el contenido
+                // que confirma que Progreso terminó de cargar, con datos o sin ellos.
+                .accessibilityElement()
+                .accessibilityLabel(weekly.hasData ? weekly.state
+                    .message : "Tu progreso aparecerá cuando confirmes tus primeras actividades.")
+                .accessibilityIdentifier("progress.summary")
 
                 if todayScore.hasData || todayScore.openCount > 0 {
                     VStack(spacing: 2) {

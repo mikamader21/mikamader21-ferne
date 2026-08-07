@@ -48,14 +48,10 @@ struct ActivityEditorView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Guardar") { save() }
                     .disabled(!canSave)
-                    .accessibilityIdentifier("editor.save")
+                    .accessibilityIdentifier("activity.save")
             }
         }
         .onAppear(perform: applyDefaults)
-        // `.contain` publica el contenedor como nodo consultable sin ocultar
-        // sus hijos. Sin esto el identificador existe pero no hay elemento
-        // que lo lleve, y la automatización no puede encontrarlo.
-        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("screen.activityEditor")
     }
 
@@ -65,6 +61,7 @@ struct ActivityEditorView: View {
                 TextField("Título", text: $title)
                     .font(FerneFont.body)
                     .accessibilityLabel("Título de la actividad")
+                    .accessibilityIdentifier("activity.title")
                 LabeledContent("Categoría") {
                     Label(category.displayName, systemImage: category.symbolName)
                         .foregroundStyle(FerneColor.categoryTint(category))

@@ -54,10 +54,6 @@ struct OnboardingFlowView: View {
                     .padding(.bottom, FerneSpacing.lg)
             }
         }
-        // `.contain` publica el contenedor como nodo consultable sin ocultar
-        // sus hijos. Sin esto el identificador existe pero no hay elemento
-        // que lo lleve, y la automatización no puede encontrarlo.
-        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("screen.onboarding")
     }
 
@@ -119,11 +115,13 @@ struct OnboardingFlowView: View {
                     DatePicker("Hora de despertar", selection: $draft.wakeTime, displayedComponents: .hourAndMinute)
                         .font(FerneFont.body)
                         .foregroundStyle(FerneColor.textPrimary)
+                        .accessibilityIdentifier("onboarding.wakeTime")
                     Divider().overlay(FerneColor.cardBorder)
                     Toggle("Quiero un recordatorio para despertar", isOn: $draft.wantsWakeReminder)
                         .font(FerneFont.secondary)
                         .foregroundStyle(FerneColor.textSecondary)
                         .tint(FerneColor.accentPrimary)
+                        .accessibilityIdentifier("onboarding.wakeReminder")
                 }
             }
         }
@@ -133,13 +131,33 @@ struct OnboardingFlowView: View {
         OnboardingPage(title: "Cuidemos tus horarios", subtitle: "Todos son opcionales. Activa solo los que uses.") {
             FerneCard {
                 VStack(spacing: FerneSpacing.sm) {
-                    OptionalTimeRow(label: "Desayuno", isOn: $draft.wantsBreakfast, time: $draft.breakfastTime)
+                    OptionalTimeRow(
+                        label: "Desayuno",
+                        identifier: "onboarding.meal.breakfast",
+                        isOn: $draft.wantsBreakfast,
+                        time: $draft.breakfastTime
+                    )
                     Divider().overlay(FerneColor.cardBorder)
-                    OptionalTimeRow(label: "Almuerzo", isOn: $draft.wantsLunch, time: $draft.lunchTime)
+                    OptionalTimeRow(
+                        label: "Almuerzo",
+                        identifier: "onboarding.meal.lunch",
+                        isOn: $draft.wantsLunch,
+                        time: $draft.lunchTime
+                    )
                     Divider().overlay(FerneColor.cardBorder)
-                    OptionalTimeRow(label: "Cena", isOn: $draft.wantsDinner, time: $draft.dinnerTime)
+                    OptionalTimeRow(
+                        label: "Cena",
+                        identifier: "onboarding.meal.dinner",
+                        isOn: $draft.wantsDinner,
+                        time: $draft.dinnerTime
+                    )
                     Divider().overlay(FerneColor.cardBorder)
-                    OptionalTimeRow(label: "Hora de dormir", isOn: $draft.wantsSleep, time: $draft.sleepTime)
+                    OptionalTimeRow(
+                        label: "Hora de dormir",
+                        identifier: "onboarding.meal.sleep",
+                        isOn: $draft.wantsSleep,
+                        time: $draft.sleepTime
+                    )
                 }
             }
         }
@@ -151,6 +169,7 @@ struct OnboardingFlowView: View {
                 VStack(alignment: .leading, spacing: FerneSpacing.sm) {
                     Toggle("Mensajes motivacionales", isOn: $draft.wantsDailyMessage)
                         .tint(FerneColor.accentPrimary)
+                        .accessibilityIdentifier("onboarding.tone.dailyMessage")
                     Divider().overlay(FerneColor.cardBorder)
                     Toggle("Recordatorios amables", isOn: $draft.wantsGentleReminders)
                         .tint(FerneColor.accentPrimary)
@@ -234,7 +253,10 @@ struct OnboardingFlowView: View {
                 .font(.system(size: 54, weight: .light))
                 .foregroundStyle(FerneColor.sunGold)
                 .padding(.vertical, FerneSpacing.md)
-                .accessibilityHidden(true)
+                // Elemento accesible real que identifica la última página.
+                .accessibilityElement()
+                .accessibilityLabel("Todo listo")
+                .accessibilityIdentifier("onboarding.ready")
         }
     }
 
@@ -247,7 +269,9 @@ struct OnboardingFlowView: View {
             }
             .buttonStyle(.fernePrimary)
             .disabled(page == 0 && draft.resolvedName.isEmpty)
-            .accessibilityIdentifier(page == lastPage ? "onboarding.finish" : "onboarding.advance")
+            // Un solo identificador para las siete páginas: el test no debe adivinar si
+            // el botón dice "Continuar" o "Comenzar".
+            .accessibilityIdentifier("onboarding.continue")
 
             if page > 0, page < lastPage {
                 Button("Atrás") {
@@ -383,6 +407,7 @@ private struct CategoryChoiceCard: View {
 /// Fila de horario opcional: interruptor + selector de hora.
 private struct OptionalTimeRow: View {
     let label: String
+    let identifier: String
     @Binding var isOn: Bool
     @Binding var time: Date
 
@@ -392,6 +417,7 @@ private struct OptionalTimeRow: View {
                 .font(FerneFont.body)
                 .foregroundStyle(FerneColor.textPrimary)
                 .tint(FerneColor.accentPrimary)
+                .accessibilityIdentifier(identifier)
             if isOn {
                 DatePicker(label, selection: $time, displayedComponents: .hourAndMinute)
                     .labelsHidden()
