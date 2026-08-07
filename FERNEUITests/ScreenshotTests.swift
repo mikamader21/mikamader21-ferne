@@ -17,6 +17,7 @@ final class ScreenshotTests: XCTestCase {
     // MARK: - Escenarios
 
     /// Las tres franjas horarias, con datos mixtos. Cubre sol, luna y cielo ciruela.
+    @MainActor
     func testCapturaFranjasHorarias() {
         for phase in ["manana", "tarde", "noche"] {
             capture(
@@ -28,6 +29,7 @@ final class ScreenshotTests: XCTestCase {
     }
 
     /// Onboarding: solo aparece en el primer ingreso.
+    @MainActor
     func testCapturaOnboarding() {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -39,41 +41,42 @@ final class ScreenshotTests: XCTestCase {
         ]
         app.launchEnvironment["FERNE_UITEST"] = "1"
         app.launch()
-        XCTAssertTrue(
-            app.otherElements["screen.onboarding"].waitForExistence(timeout: 15),
-            "El onboarding debe aparecer en una instalación nueva."
-        )
+        let onboardingShown = app.otherElements["screen.onboarding"].waitForExistence(timeout: 15)
+        XCTAssertTrue(onboardingShown, "El onboarding debe aparecer en una instalación nueva.")
         Thread.sleep(forTimeInterval: 0.8)
         attach(app.screenshot(), named: "onboarding-nombre")
         app.terminate()
     }
 
     /// Menú de creación, al pulsar el botón +.
+    @MainActor
     func testCapturaCreador() {
         let app = launch(phase: "manana", fixture: "vacio")
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15))
+        let tabBarShown = app.tabBars.firstMatch.waitForExistence(timeout: 15)
+        XCTAssertTrue(tabBarShown)
         app.buttons["Agregar"].tap()
-        XCTAssertTrue(
-            app.otherElements["screen.addMenu"].waitForExistence(timeout: 8),
-            "La hoja de creación debe abrirse."
-        )
+        let addMenuShown = app.otherElements["screen.addMenu"].waitForExistence(timeout: 8)
+        XCTAssertTrue(addMenuShown, "La hoja de creación debe abrirse.")
         Thread.sleep(forTimeInterval: 0.8)
         attach(app.screenshot(), named: "creador-menu")
         app.terminate()
     }
 
     /// Estado vacío: FERNÉ nunca muestra una pantalla en blanco.
+    @MainActor
     func testCapturaEstadoVacio() {
         capture(name: "home-vacio-manana", phase: "manana", fixture: "vacio", screen: "screen.home")
         capture(name: "home-vacio-noche", phase: "noche", fixture: "vacio", screen: "screen.home")
     }
 
     /// Día completo: todas las actividades marcadas.
+    @MainActor
     func testCapturaDiaCompleto() {
         capture(name: "home-completo-tarde", phase: "tarde", fixture: "completo", screen: "screen.home")
     }
 
     /// Dynamic Type en tamaño de accesibilidad grande (§14.3).
+    @MainActor
     func testCapturaDynamicTypeGrande() {
         capture(
             name: "home-dynamictype-XXL-manana",
@@ -91,24 +94,25 @@ final class ScreenshotTests: XCTestCase {
     }
 
     /// Reduce Motion: la escena debe conservarse, solo se detiene el movimiento.
+    @MainActor
     func testCapturaReduceMotion() {
         capture(name: "home-reducemotion-noche", phase: "noche", screen: "screen.home", reduceMotion: true)
     }
 
     /// Splash cinematográfico en sus dos variantes.
+    @MainActor
     func testCapturaSplash() {
         for phase in ["manana", "noche"] {
             let app = launch(phase: phase, skipSplash: false)
-            XCTAssertTrue(
-                app.otherElements["screen.splash"].waitForExistence(timeout: 5),
-                "El splash debe aparecer en \(phase)."
-            )
+            let splashShown = app.otherElements["screen.splash"].waitForExistence(timeout: 5)
+            XCTAssertTrue(splashShown, "El splash debe aparecer en \(phase).")
             attach(app.screenshot(), named: "splash-\(phase)")
             app.terminate()
         }
     }
 
     /// Las cuatro pestañas, de día y de noche.
+    @MainActor
     func testCapturaTodasLasPestanas() {
         let tabs = [
             ("Inicio", "screen.home"),
@@ -118,7 +122,8 @@ final class ScreenshotTests: XCTestCase {
         ]
         for phase in ["manana", "noche"] {
             let app = launch(phase: phase)
-            XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15))
+            let tabBarShown = app.tabBars.firstMatch.waitForExistence(timeout: 15)
+            XCTAssertTrue(tabBarShown)
             for (title, identifier) in tabs {
                 app.tabBars.buttons[title].tap()
                 _ = app.otherElements[identifier].waitForExistence(timeout: 5)
@@ -130,6 +135,7 @@ final class ScreenshotTests: XCTestCase {
 
     // MARK: - Utilidades
 
+    @MainActor
     private func launch(
         phase: String,
         fixture: String = "mixto",
@@ -154,6 +160,7 @@ final class ScreenshotTests: XCTestCase {
         return app
     }
 
+    @MainActor
     private func capture(
         name: String,
         phase: String,
@@ -164,23 +171,20 @@ final class ScreenshotTests: XCTestCase {
         contentSize: String? = nil
     ) {
         let app = launch(phase: phase, fixture: fixture, reduceMotion: reduceMotion, contentSize: contentSize)
-        XCTAssertTrue(
-            app.tabBars.firstMatch.waitForExistence(timeout: 15),
-            "La app no llegó a la barra de pestañas para '\(name)'."
-        )
+        let tabBarShown = app.tabBars.firstMatch.waitForExistence(timeout: 15)
+        XCTAssertTrue(tabBarShown, "La app no llegó a la barra de pestañas para '\(name)'.")
         if let tab {
             app.tabBars.buttons[tab].tap()
         }
-        XCTAssertTrue(
-            app.otherElements[screen].waitForExistence(timeout: 8),
-            "No apareció '\(screen)' para '\(name)'."
-        )
+        let screenShown = app.otherElements[screen].waitForExistence(timeout: 8)
+        XCTAssertTrue(screenShown, "No apareció '\(screen)' para '\(name)'.")
         // Margen para que la escena termine su transición de entrada.
         Thread.sleep(forTimeInterval: 1.0)
         attach(app.screenshot(), named: name)
         app.terminate()
     }
 
+    @MainActor
     private func attach(_ screenshot: XCUIScreenshot, named name: String) {
         let device = deviceSlug()
         let attachment = XCTAttachment(screenshot: screenshot)

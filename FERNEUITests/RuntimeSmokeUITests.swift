@@ -27,13 +27,15 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - A · Onboarding omitiendo notificaciones
 
+    @MainActor
     func testA_OnboardingWithoutNotificationsReachesHomeAndStaysAlive() {
         let app = launch(resetStore: true, skipOnboarding: false, showSplash: true)
 
         trail.step("esperando el splash", page: "splash")
+        let splashShown = app.otherElements["screen.splash"].waitForExistence(timeout: 25)
+        let onboardingShown = app.otherElements["screen.onboarding"].waitForExistence(timeout: 25)
         XCTAssertTrue(
-            app.otherElements["screen.splash"].waitForExistence(timeout: 25)
-                || app.otherElements["screen.onboarding"].waitForExistence(timeout: 25),
+            splashShown || onboardingShown,
             diagnosis(app, "No apareció ni el splash ni el onboarding.")
         )
 
@@ -43,6 +45,7 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - B · Onboarding activando notificaciones
 
+    @MainActor
     func testB_OnboardingWithNotificationsReachesHomeAndStaysAlive() {
         let app = launch(resetStore: true, skipOnboarding: false, showSplash: false)
 
@@ -52,6 +55,7 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - C · Recorrido funcional completo
 
+    @MainActor
     func testC_CreateGymConfirmItAndSeeItInProgress() {
         let app = launch(resetStore: true, skipOnboarding: false, showSplash: false)
         completeOnboarding(app, notifications: .skip)
@@ -59,45 +63,44 @@ final class RuntimeSmokeUITests: XCTestCase {
 
         trail.step("pulsando el botón +", page: "home")
         let fab = app.buttons["home.fab"]
-        XCTAssertTrue(fab.waitForExistence(timeout: 15), diagnosis(app, "No se encontró el botón +."))
+        let fabExists = fab.waitForExistence(timeout: 15)
+        XCTAssertTrue(fabExists, diagnosis(app, "No se encontró el botón +."))
         fab.tap()
 
         trail.step("esperando el menú de creación", page: "addMenu")
-        XCTAssertTrue(
-            app.otherElements["screen.addMenu"].waitForExistence(timeout: 15),
-            diagnosis(app, "El menú de creación no se abrió.")
-        )
+        let addMenuShown = app.otherElements["screen.addMenu"].waitForExistence(timeout: 15)
+        XCTAssertTrue(addMenuShown, diagnosis(app, "El menú de creación no se abrió."))
 
         trail.step("eligiendo la categoría Gym", page: "addMenu")
         let gym = app.buttons["addMenu.gym"]
-        XCTAssertTrue(gym.waitForExistence(timeout: 10), diagnosis(app, "No se encontró la categoría Gym."))
+        let gymExists = gym.waitForExistence(timeout: 10)
+        XCTAssertTrue(gymExists, diagnosis(app, "No se encontró la categoría Gym."))
         gym.tap()
 
         trail.step("esperando el editor", page: "editor")
-        XCTAssertTrue(
-            app.otherElements["screen.activityEditor"].waitForExistence(timeout: 15),
-            diagnosis(app, "El editor de actividad no se abrió.")
-        )
+        let editorShown = app.otherElements["screen.activityEditor"].waitForExistence(timeout: 15)
+        XCTAssertTrue(editorShown, diagnosis(app, "El editor de actividad no se abrió."))
         assertAlive(app, "La app se cerró al abrir el editor.")
 
         trail.step("guardando la actividad", page: "editor")
         let save = app.buttons["editor.save"]
-        XCTAssertTrue(save.waitForExistence(timeout: 10), diagnosis(app, "No se encontró el botón Guardar."))
+        let saveExists = save.waitForExistence(timeout: 10)
+        XCTAssertTrue(saveExists, diagnosis(app, "No se encontró el botón Guardar."))
         save.tap()
 
         trail.step("comprobando que la actividad aparece en Inicio", page: "home")
         let card = app.otherElements["activity.row.gym"]
-        XCTAssertTrue(card.waitForExistence(timeout: 20), diagnosis(app, "La actividad creada no apareció en Inicio."))
+        let cardExists = card.waitForExistence(timeout: 20)
+        XCTAssertTrue(cardExists, diagnosis(app, "La actividad creada no apareció en Inicio."))
         assertAlive(app, "La app se cerró tras guardar la actividad.")
 
         trail.step("abriendo la pestaña Progreso", page: "progress")
         let progressTab = app.tabBars.buttons["Progreso"]
-        XCTAssertTrue(progressTab.waitForExistence(timeout: 10), diagnosis(app, "Falta la pestaña Progreso."))
+        let progressTabExists = progressTab.waitForExistence(timeout: 10)
+        XCTAssertTrue(progressTabExists, diagnosis(app, "Falta la pestaña Progreso."))
         progressTab.tap()
-        XCTAssertTrue(
-            app.otherElements["screen.progress"].waitForExistence(timeout: 15),
-            diagnosis(app, "Progreso no se abrió.")
-        )
+        let progressShown = app.otherElements["screen.progress"].waitForExistence(timeout: 15)
+        XCTAssertTrue(progressShown, diagnosis(app, "Progreso no se abrió."))
         assertAlive(app, "La app se cerró al abrir Progreso.")
 
         survive(app, scenario: "C · recorrido funcional")
@@ -105,6 +108,7 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - D · Persistencia entre lanzamientos
 
+    @MainActor
     func testD_DataSurvivesRelaunch() {
         // Primer lanzamiento: se borra el almacén aislado y se crea una actividad.
         let first = launch(resetStore: true, skipOnboarding: false, showSplash: false)
@@ -112,8 +116,9 @@ final class RuntimeSmokeUITests: XCTestCase {
         assertReachedHomeAndSurvives(first, scenario: "D · primer lanzamiento")
 
         createGym(in: first)
+        let createdInFirstLaunch = first.otherElements["activity.row.gym"].waitForExistence(timeout: 20)
         XCTAssertTrue(
-            first.otherElements["activity.row.gym"].waitForExistence(timeout: 20),
+            createdInFirstLaunch,
             diagnosis(first, "La actividad no llegó a crearse en el primer lanzamiento.")
         )
         first.terminate()
@@ -124,20 +129,18 @@ final class RuntimeSmokeUITests: XCTestCase {
         let second = launch(resetStore: false, skipOnboarding: false, showSplash: false)
 
         trail.step("comprobando que NO reaparece el onboarding", page: "home")
-        XCTAssertTrue(
-            second.otherElements["screen.home"].waitForExistence(timeout: 25),
-            diagnosis(second, "Tras relanzar no se llegó a Inicio.")
-        )
+        let homeAfterRelaunch = second.otherElements["screen.home"].waitForExistence(timeout: 25)
+        XCTAssertTrue(homeAfterRelaunch, diagnosis(second, "Tras relanzar no se llegó a Inicio."))
+
+        let onboardingReappeared = second.otherElements["screen.onboarding"].exists
         XCTAssertFalse(
-            second.otherElements["screen.onboarding"].exists,
+            onboardingReappeared,
             diagnosis(second, "El onboarding reapareció: no se guardó que ya se completó.")
         )
 
         trail.step("comprobando que la actividad sigue guardada", page: "home")
-        XCTAssertTrue(
-            second.otherElements["activity.row.gym"].waitForExistence(timeout: 20),
-            diagnosis(second, "La actividad no sobrevivió al relanzamiento.")
-        )
+        let survived = second.otherElements["activity.row.gym"].waitForExistence(timeout: 20)
+        XCTAssertTrue(survived, diagnosis(second, "La actividad no sobrevivió al relanzamiento."))
 
         survive(second, scenario: "D · persistencia")
     }
@@ -147,12 +150,11 @@ final class RuntimeSmokeUITests: XCTestCase {
     private enum NotificationChoice { case enable, skip }
 
     /// Avanza las siete páginas (0…6).
+    @MainActor
     private func completeOnboarding(_ app: XCUIApplication, notifications: NotificationChoice) {
         trail.step("esperando el onboarding", page: "onboarding")
-        XCTAssertTrue(
-            app.otherElements["screen.onboarding"].waitForExistence(timeout: 30),
-            diagnosis(app, "El onboarding no apareció en una instalación limpia.")
-        )
+        let onboardingShown = app.otherElements["screen.onboarding"].waitForExistence(timeout: 30)
+        XCTAssertTrue(onboardingShown, diagnosis(app, "El onboarding no apareció en una instalación limpia."))
 
         for page in 0 ... 6 {
             trail.step("página \(page)", page: "onboarding.\(page)")
@@ -174,6 +176,7 @@ final class RuntimeSmokeUITests: XCTestCase {
         }
     }
 
+    @MainActor
     private func resolveNotifications(_ app: XCUIApplication, choice: NotificationChoice) {
         switch choice {
         case .skip:
@@ -196,6 +199,7 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     /// Resuelve el diálogo de iOS acepte o rechace: ambos caminos deben dejar la app
     /// en pie. Si el permiso se deniega, FERNÉ tiene que seguir funcionando.
+    @MainActor
     private func resolveSystemPermissionDialog(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let candidates = ["Permitir", "Allow", "No permitir", "Don't Allow", "Don’t Allow"]
@@ -216,6 +220,7 @@ final class RuntimeSmokeUITests: XCTestCase {
         trail.step("el diálogo del sistema no apareció", page: "onboarding.5")
     }
 
+    @MainActor
     private func createGym(in app: XCUIApplication) {
         trail.step("creando actividad Gym", page: "home")
         let fab = app.buttons["home.fab"]
@@ -240,18 +245,18 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - Comprobaciones
 
+    @MainActor
     private func assertReachedHomeAndSurvives(_ app: XCUIApplication, scenario: String) {
         trail.step("esperando Inicio", page: "home")
-        XCTAssertTrue(
-            app.otherElements["screen.home"].waitForExistence(timeout: 25),
-            diagnosis(app, "\(scenario): no se llegó a Inicio.")
-        )
+        let homeShown = app.otherElements["screen.home"].waitForExistence(timeout: 25)
+        XCTAssertTrue(homeShown, diagnosis(app, "\(scenario): no se llegó a Inicio."))
         survive(app, scenario: scenario)
     }
 
     /// La pantalla aparece y **sigue ahí** pasados unos segundos.
     /// El crash reportado ocurría en la transición: comprobar solo la aparición
     /// habría dado un falso verde.
+    @MainActor
     private func survive(_ app: XCUIApplication, scenario: String) {
         assertAlive(app, "\(scenario): la app no estaba en primer plano.")
         trail.step("esperando \(Int(survivalWindow)) s para confirmar que sigue viva", page: "home")
@@ -259,6 +264,7 @@ final class RuntimeSmokeUITests: XCTestCase {
         assertAlive(app, "\(scenario): la app se cerró en los \(Int(survivalWindow)) s siguientes.")
     }
 
+    @MainActor
     private func launch(resetStore: Bool, skipOnboarding: Bool, showSplash: Bool) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -276,12 +282,14 @@ final class RuntimeSmokeUITests: XCTestCase {
 
     // MARK: - Diagnóstico
 
+    @MainActor
     private func assertAlive(_ app: XCUIApplication, _ message: String) {
         guard app.state != .runningForeground else { return }
         XCTFail(diagnosis(app, message))
     }
 
     /// Informe completo del punto de fallo. Se adjunta al `.xcresult`.
+    @MainActor
     private func diagnosis(_ app: XCUIApplication, _ message: String) -> String {
         let report = """
         ════════════════════════════════════════
@@ -308,6 +316,7 @@ final class RuntimeSmokeUITests: XCTestCase {
         return report
     }
 
+    @MainActor
     private func attach(string: String, named: String) {
         let attachment = XCTAttachment(string: string)
         attachment.name = "\(named)-\(name).txt"
@@ -315,6 +324,10 @@ final class RuntimeSmokeUITests: XCTestCase {
         add(attachment)
     }
 
+    /// `XCUIApplication.State` es un tipo anidado de un tipo aislado al actor
+    /// principal. Se marca también para no depender de si Swift propaga o no ese
+    /// aislamiento a los anidados.
+    @MainActor
     private static func describe(_ state: XCUIApplication.State) -> String {
         switch state {
         case .notRunning: "notRunning — EL PROCESO TERMINÓ"
