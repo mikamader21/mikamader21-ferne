@@ -1,0 +1,269 @@
+# Diagnóstico directo del proceso de FERNÉ, **sin XCTest ni XCUIAutomation**.
+#
+# Por qué existe: el runtime smoke ha fallado tres veces informando que la app
+# está en `runningForeground` pero que ninguna pantalla `screen.*` es visible
+# para XCTest. Eso apunta a la capa de automatización, no a la app. Este workflow
+# la elimina de la ecuación: instala, lanza con `simctl` y mira el proceso y la
+# pantalla directamente.
+#
+# No sustituye a `iOS Build Now` ni toca su bloqueo: el artifact oficial sigue
+# condicionado a que los cuatro escenarios del smoke pasen.
+
+name: iOS Diagnose Launch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUNDLE_ID: com.ferne.app
+  DERIVED_DATA: build/DerivedData
+  DIAG: artifacts/diagnose
+
+jobs:
+  diagnose:
+    name: Lanzar en el simulador y observar el proceso
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Seleccionar Xcode 16.4
+        run: |
+          set -euo pipefail
+          XCODE_APP=""
+          if [ -d /Applications/Xcode_16.4.app ]; then
+            XCODE_APP=/Applications/Xcode_16.4.app
+          else
+            # Sin la 16.4 exacta, la 16.x más alta disponible. Se registra cuál.
+            XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$XCODE_APP" ]; then
+            echo "ERROR: el runner no tiene Xcode 16."
+            exit 1
+          fi
+          echo "Xcode seleccionado: $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Preparar carpetas
+        run: mkdir -p "$DIAG"
+
+      - name: Instalar XcodeGen
+        run: |
+          # Mismo bloque ya validado en `iOS Build Now`: si el runner lo trae, no
+          # se toca Homebrew.
+          command -v xcodegen > /dev/null || brew install xcodegen
+          xcodegen --version | tee "$DIAG/xcodegen-version.txt"
+
+      - name: Generar FERNE.xcodeproj
+        run: |
+          set -o pipefail
+          xcodegen generate 2>&1 | tee "$DIAG/xcodegen.log"
+
+      - name: Resolver simulador
+        id: simulator
+        run: |
+          set -o pipefail
+          bash Scripts/ci/resolve-simulator.sh 'iPhone 16 Pro' 2>&1 | tee "$DIAG/simulator.log"
+
+      - name: Compilar para iOS Simulator (sin firma)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project FERNE.xcodeproj \
+            -scheme FERNE \
+            -destination "${{ steps.simulator.outputs.sim_destination }}" \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee "$DIAG/xcodebuild.log"
+
+      - name: Arrancar el simulador
+        env:
+          UDID: ${{ steps.simulator.outputs.sim_udid }}
+        run: |
+          set -uo pipefail
+          echo "Arrancando $UDID"
+          xcrun simctl boot "$UDID" 2>&1 | tee "$DIAG/boot.log" || true
+          xcrun simctl bootstatus "$UDID" -b 2>&1 | tee -a "$DIAG/boot.log" || true
+          xcrun simctl list devices booted | tee -a "$DIAG/boot.log"
+
+      - name: Instalar FERNE.app
+        id: install
+        env:
+          UDID: ${{ steps.simulator.outputs.sim_udid }}
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find "$DERIVED_DATA/Build/Products" -name 'FERNE.app' -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: no se encontró FERNE.app tras compilar."
+            find "$DERIVED_DATA/Build/Products" -maxdepth 3 || true
+            exit 1
+          fi
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          {
+            echo "Ruta exacta de la app: $APP_PATH"
+            echo ""
+            echo "Contenido del bundle:"
+            ls -la "$APP_PATH"
+            echo ""
+            echo "Arquitecturas:"
+            lipo -info "$APP_PATH/FERNE" || true
+          } | tee "$DIAG/app-info.txt"
+
+          xcrun simctl install "$UDID" "$APP_PATH" 2>&1 | tee "$DIAG/install.log"
+          echo "Instalada."
+
+      - name: Lanzar con simctl y observar el proceso
+        id: launch
+        env:
+          UDID: ${{ steps.simulator.outputs.sim_udid }}
+          # `SIMCTL_CHILD_` pasa la variable al proceso de la app, no a simctl.
+          SIMCTL_CHILD_FERNE_RUNTIME_SMOKE: '1'
+          SIMCTL_CHILD_FERNE_RUNTIME_TEST_ID: DIAG
+        run: |
+          set -uo pipefail
+
+          ARGS="-FERNERuntimeSmoke -FERNERuntimeTestID DIAG -FERNEResetStore -FERNESkipSplash 1 -FERNESkipOnboarding 0"
+          {
+            echo "Argumentos : $ARGS"
+            echo "Entorno    : FERNE_RUNTIME_SMOKE=1 FERNE_RUNTIME_TEST_ID=DIAG"
+            echo "Bundle     : $BUNDLE_ID"
+          } | tee "$DIAG/launch-config.txt"
+
+          # shellcheck disable=SC2086
+          LAUNCH_OUTPUT=$(xcrun simctl launch "$UDID" "$BUNDLE_ID" $ARGS 2>&1 | tee "$DIAG/launch.log")
+          echo "$LAUNCH_OUTPUT"
+          LAUNCH_PID=$(echo "$LAUNCH_OUTPUT" | grep -oE '[0-9]+$' | tail -1 || true)
+          echo "PID de lanzamiento: ${LAUNCH_PID:-desconocido}"
+          echo "launch_pid=${LAUNCH_PID:-}" >> "$GITHUB_OUTPUT"
+
+          # --- Segundo 5 ---
+          sleep 5
+          if [ -n "${LAUNCH_PID:-}" ] && ps -p "$LAUNCH_PID" > /dev/null 2>&1; then
+            PID5="$LAUNCH_PID"; STATE5="ejecutandose"
+          else
+            PID5=$(pgrep -f "FERNE.app/FERNE" | head -1 || true)
+            if [ -n "$PID5" ]; then STATE5="ejecutandose (pid distinto al de lanzamiento)"; else STATE5="NO ejecutandose"; fi
+          fi
+          echo "t=5s  PID=${PID5:-ninguno}  estado=$STATE5"
+          echo "pid5=${PID5:-}" >> "$GITHUB_OUTPUT"
+          echo "state5=$STATE5" >> "$GITHUB_OUTPUT"
+          xcrun simctl io "$UDID" screenshot "$DIAG/ferne-after-5s.png" 2>&1 | tee -a "$DIAG/screenshots.log" || true
+
+          # --- Segundo 15 ---
+          sleep 10
+          PID15=$(pgrep -f "FERNE.app/FERNE" | head -1 || true)
+          if [ -n "$PID15" ]; then STATE15="ejecutandose"; else STATE15="NO ejecutandose"; fi
+          echo "t=15s PID=${PID15:-ninguno} estado=$STATE15"
+          echo "pid15=${PID15:-}" >> "$GITHUB_OUTPUT"
+          echo "state15=$STATE15" >> "$GITHUB_OUTPUT"
+          xcrun simctl io "$UDID" screenshot "$DIAG/ferne-after-15s.png" 2>&1 | tee -a "$DIAG/screenshots.log" || true
+
+          ls -la "$DIAG"/*.png 2>/dev/null || echo "AVISO: no se generaron capturas."
+
+      - name: Recopilar logs del proceso y del simulador
+        if: always()
+        env:
+          UDID: ${{ steps.simulator.outputs.sim_udid }}
+        run: |
+          set -uo pipefail
+
+          xcrun simctl spawn "$UDID" log show \
+            --last 10m \
+            --predicate 'subsystem == "com.ferne.app" OR processImagePath CONTAINS "FERNE"' \
+            > "$DIAG/simulator-ferne.log" 2>/dev/null || echo "(sin logs del subsistema)" > "$DIAG/simulator-ferne.log"
+          echo "simulator-ferne.log: $(wc -l < "$DIAG/simulator-ferne.log") lineas"
+
+          # Informes de fallo, si los hubiera.
+          find "$HOME/Library/Logs/DiagnosticReports" -name 'FERNE*' -newermt '-1 hour' 2>/dev/null \
+            | while IFS= read -r f; do cp "$f" "$DIAG/" && echo "crash: $(basename "$f")"; done
+          find "$HOME/Library/Developer/CoreSimulator/Devices/$UDID" -name 'FERNE*.ips' 2>/dev/null \
+            | while IFS= read -r f; do cp "$f" "$DIAG/" && echo "crash sim: $(basename "$f")"; done
+
+          xcrun simctl diagnose --no-archive --output "$DIAG/simctl-diagnose" > /dev/null 2>&1 || true
+          ls -la "$DIAG"
+
+      - name: Empaquetar la app (NO VERIFICADA)
+        if: always()
+        env:
+          APP_PATH: ${{ steps.install.outputs.app_path }}
+        run: |
+          set -uo pipefail
+          mkdir -p "$DIAG/app"
+          if [ -n "${APP_PATH:-}" ] && [ -d "$APP_PATH" ]; then
+            ( cd "$(dirname "$APP_PATH")" && zip -qry "$GITHUB_WORKSPACE/$DIAG/app/FERNE-diagnose.zip" "$(basename "$APP_PATH")" )
+            cat > "$DIAG/app/LEEME-NO-VERIFICADO.txt" <<'INFO'
+          FERNE.app - COMPILACION DE DIAGNOSTICO. NO VERIFICADA.
+
+          Esta app NO ha pasado los cuatro escenarios de RuntimeSmokeUITests.
+          Se publica unicamente para inspeccionar el fallo de lanzamiento.
+
+          NO la trates como una entrega: para eso esta FERNE-app-now, que solo
+          se genera cuando el smoke pasa entero.
+          INFO
+            ls -lh "$DIAG/app"
+          else
+            echo "No hubo app que empaquetar." | tee "$DIAG/app/LEEME-NO-VERIFICADO.txt"
+          fi
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Diagnostico de lanzamiento directo"
+            echo ""
+            echo "Sin XCTest ni XCUIAutomation: solo \`simctl\`."
+            echo ""
+            echo "| Momento | PID | Estado |"
+            echo "|---|---|---|"
+            echo "| Lanzamiento | ${{ steps.launch.outputs.launch_pid }} | - |"
+            echo "| t = 5 s | ${{ steps.launch.outputs.pid5 }} | ${{ steps.launch.outputs.state5 }} |"
+            echo "| t = 15 s | ${{ steps.launch.outputs.pid15 }} | ${{ steps.launch.outputs.state15 }} |"
+            echo ""
+            echo "**Ruta de la app:** \`${{ steps.install.outputs.app_path }}\`"
+            echo ""
+            echo "**Argumentos:** \`-FERNERuntimeSmoke -FERNERuntimeTestID DIAG -FERNEResetStore -FERNESkipSplash 1 -FERNESkipOnboarding 0\`"
+            echo ""
+            echo "**Entorno:** \`FERNE_RUNTIME_SMOKE=1\`, \`FERNE_RUNTIME_TEST_ID=DIAG\`"
+            echo ""
+            echo "Mira \`ferne-after-5s.png\` y \`ferne-after-15s.png\`: dicen si la app"
+            echo "dibuja algo o se queda en negro, que es lo que XCTest no podia responder."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Artifact · capturas
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: FERNE-diagnose-screenshots
+          path: ${{ env.DIAG }}/*.png
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Artifact · logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: FERNE-diagnose-logs
+          path: |
+            ${{ env.DIAG }}/*.log
+            ${{ env.DIAG }}/*.txt
+            ${{ env.DIAG }}/*.ips
+            ${{ env.DIAG }}/simctl-diagnose
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Artifact · app sin verificar
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: FERNE-diagnose-app-unverified
+          path: ${{ env.DIAG }}/app/
+          retention-days: 14
+          if-no-files-found: warn
