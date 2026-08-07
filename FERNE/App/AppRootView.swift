@@ -36,7 +36,9 @@ struct AppRootView: View {
                 .transition(.opacity)
         } else {
             OnboardingFlowView(preferences: preferences) {
-                withAnimation(FerneMotion.expressive) { hasFinishedOnboarding = true }
+                // `expressive` es una duración en segundos, no una Animation:
+                // hay que construir la curva con ella.
+                withAnimation(.easeInOut(duration: FerneMotion.expressive)) { hasFinishedOnboarding = true }
             }
             .transition(.opacity)
         }
