@@ -62,10 +62,12 @@ struct SparksView: View {
         guard preferences.wantsDailyMessage else {
             return "Tienes los mensajes desactivados. Puedes volver a activarlos en Perfil."
         }
+        // `return` explícito en cada caso: el getter tiene un `guard` antes, así que
+        // no es de una sola expresión y el retorno implícito no aplica.
         switch themeController.phase {
-        case .manana: "Hoy no tienes que hacerlo todo. Solo lo que importa, a tu ritmo."
-        case .tarde: "Si algo se movió de sitio, no pasa nada. Sigues avanzando."
-        case .noche: "Cerrar el día también cuenta. Descansa bien, \(preferences.preferredName)."
+        case .manana: return "Hoy no tienes que hacerlo todo. Solo lo que importa, a tu ritmo."
+        case .tarde: return "Si algo se movió de sitio, no pasa nada. Sigues avanzando."
+        case .noche: return "Cerrar el día también cuenta. Descansa bien, \(preferences.preferredName)."
         }
     }
 }
