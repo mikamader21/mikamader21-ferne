@@ -28,7 +28,6 @@ struct AppRootView: View {
         .ferneTheme(theme.theme)
         .animation(FerneMotion.ease, value: isShowingSplash)
         .forcedReduceMotionForScreenshots()
-        .accessibilityIdentifier("ferne.root")
         .onAppear { hasFinishedOnboarding = preferences.hasCompletedOnboarding }
         // Si Fer viaja o cambia la hora del iPhone, la escena se recalcula sola.
         .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in

@@ -73,7 +73,6 @@ struct HomeView: View {
             floatingButton
         }
         .navigationTitle("")
-        .accessibilityIdentifier("screen.home")
         .sheet(isPresented: $isShowingAddMenu) {
             AddActivitySheet()
         }
