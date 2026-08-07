@@ -26,11 +26,21 @@ final class ThemeTests: XCTestCase {
         }
     }
 
+    /// `ThemeController` está aislado al actor principal: el método se marca y los
+    /// valores se extraen antes de compararlos. Dentro de la autoclosure de
+    /// `XCTAssertEqual` el compilador pierde el aislamiento.
+    @MainActor
     func testThemeControllerFollowsItsProvider() {
         let controller = ThemeController.preview(.noche)
-        XCTAssertEqual(controller.phase, .noche)
-        XCTAssertEqual(controller.theme.celestialBody, .moon)
-        XCTAssertEqual(controller.greeting(for: "Fer"), "Buenas noches, Fer 🌙")
+        let phase = controller.phase
+        let celestialBody = controller.theme.celestialBody
+        let greeting = controller.greeting(for: "Fer")
+
+        XCTAssertEqual(phase, .noche)
+        XCTAssertEqual(celestialBody, .moon)
+        // Sin emoji: se retiró del saludo por decisión D-031, porque la escena ya
+        // muestra la luna. Esta assertion se había quedado desactualizada.
+        XCTAssertEqual(greeting, "Buenas noches, Fer")
     }
 
     func testPhaseTransitionStaysInsideItsRange() {
