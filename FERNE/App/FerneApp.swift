@@ -10,7 +10,7 @@ struct FerneApp: App {
 
     /// Contenedor de SwiftData. En producción arranca **vacío**; solo los UI tests
     /// reciben un contenedor en memoria con datos deterministas.
-    private let container = ModelContainerFactory.make()
+    private let container: ModelContainer
     private let responder: NotificationResponder
 
     init() {

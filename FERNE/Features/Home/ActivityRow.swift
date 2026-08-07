@@ -27,33 +27,6 @@ struct QuickAddChip: View {
     }
 }
 
-/// Acceso rápido del estado vacío: abre el editor con la categoría ya elegida.
-struct QuickAddChip: View {
-    let category: ActivityCategory
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: FerneSpacing.xxs) {
-                Image(systemName: category.symbolName)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(FerneColor.categoryTint(category))
-                Text(category.displayName)
-                    .font(FerneFont.meta)
-                    .foregroundStyle(FerneColor.textSecondary)
-            }
-            .frame(maxWidth: .infinity, minHeight: FerneSize.minimumTapTarget + 16)
-            .padding(.vertical, FerneSpacing.xs)
-            .background {
-                RoundedRectangle(cornerRadius: FerneRadius.control, style: .continuous)
-                    .fill(FerneColor.surfaceSoft)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Agregar \(category.displayName)")
-    }
-}
-
 /// Fila de actividad. El estado nunca depende solo del color: hay icono, tachado y texto.
 struct ActivityRow: View {
     let activity: ActivitySnapshot
