@@ -12,19 +12,31 @@ public final class ThemeController {
     private let provider: any DayPhaseProviding
 
     public init(provider: any DayPhaseProviding = SystemDayPhaseProvider()) {
-        // Bajo UI tests la franja se fija por argumento de lanzamiento: las capturas
-        // de mañana, tarde y noche no pueden depender de la hora del simulador.
-        if let forced = UITestConfiguration.forcedPhase {
-            self.provider = FixedDayPhaseProvider(phase: forced, date: ScreenshotFixtures.anchorDate)
-            phase = forced
-        } else {
+        #if DEBUG
+            // Bajo UI tests la franja se fija por argumento de lanzamiento: las capturas
+            // de mañana, tarde y noche no pueden depender de la hora del simulador.
+            // `ScreenshotFixtures` solo existe en Debug, de ahí el guardado.
+            if let forced = UITestConfiguration.forcedPhase {
+                self.provider = FixedDayPhaseProvider(phase: forced, date: ScreenshotFixtures.anchorDate)
+                phase = forced
+            } else {
+                self.provider = provider
+                phase = provider.currentPhase
+            }
+        #else
             self.provider = provider
             phase = provider.currentPhase
-        }
+        #endif
     }
 
     public var theme: FerneTheme {
         .theme(for: phase)
+    }
+
+    /// "Ahora" según la app. Bajo UI tests es la fecha ancla fija, para que las
+    /// capturas no dependan del reloj del simulador.
+    public var referenceDate: Date {
+        provider.now
     }
 
     public func refresh() {

@@ -1,22 +1,30 @@
+import SwiftData
 import SwiftUI
 
 @main
 struct FerneApp: App {
     @State private var theme = ThemeController()
+    @State private var preferences = UserPreferences()
     @Environment(\.scenePhase) private var scenePhase
+
+    /// Contenedor de SwiftData. En producción arranca **vacío**; solo los UI tests
+    /// reciben un contenedor en memoria con datos deterministas.
+    private let container = ModelContainerFactory.make()
 
     var body: some Scene {
         WindowGroup {
             AppRootView()
                 .environment(theme)
+                .environment(preferences)
                 .ferneTheme(theme.theme)
                 .tint(FerneColor.accentPrimary)
-                // FERNÉ es una app luminosa: no hay variante oscura del sistema,
-                // el "modo noche" lo gobierna DayPhase, no el ajuste de iOS (§4.5).
+                // FERNÉ es una app luminosa: el "modo noche" lo gobierna DayPhase,
+                // no el ajuste de apariencia de iOS (§4.5).
                 .preferredColorScheme(.light)
         }
+        .modelContainer(container)
         .onChange(of: scenePhase) { _, newPhase in
-            // La franja horaria puede haber cambiado mientras la app estaba en segundo plano.
+            // La franja horaria pudo cambiar mientras la app estaba en segundo plano.
             if newPhase == .active {
                 theme.refresh()
             }

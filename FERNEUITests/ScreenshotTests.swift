@@ -27,6 +27,41 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 
+    /// Onboarding: solo aparece en el primer ingreso.
+    func testCapturaOnboarding() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-FERNEUITest", "1",
+            "-FERNEPhase", "manana",
+            "-FERNEFixture", "vacio",
+            "-FERNESkipSplash", "1",
+            "-FERNEResetOnboarding", "1"
+        ]
+        app.launchEnvironment["FERNE_UITEST"] = "1"
+        app.launch()
+        XCTAssertTrue(
+            app.otherElements["screen.onboarding"].waitForExistence(timeout: 15),
+            "El onboarding debe aparecer en una instalación nueva."
+        )
+        Thread.sleep(forTimeInterval: 0.8)
+        attach(app.screenshot(), named: "onboarding-nombre")
+        app.terminate()
+    }
+
+    /// Menú de creación, al pulsar el botón +.
+    func testCapturaCreador() {
+        let app = launch(phase: "manana", fixture: "vacio")
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15))
+        app.buttons["Agregar"].tap()
+        XCTAssertTrue(
+            app.otherElements["screen.addMenu"].waitForExistence(timeout: 8),
+            "La hoja de creación debe abrirse."
+        )
+        Thread.sleep(forTimeInterval: 0.8)
+        attach(app.screenshot(), named: "creador-menu")
+        app.terminate()
+    }
+
     /// Estado vacío: FERNÉ nunca muestra una pantalla en blanco.
     func testCapturaEstadoVacio() {
         capture(name: "home-vacio-manana", phase: "manana", fixture: "vacio", screen: "screen.home")

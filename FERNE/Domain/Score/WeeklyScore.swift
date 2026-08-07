@@ -68,6 +68,14 @@ public struct WeeklyScore: Hashable, Codable, Sendable {
         Int(rawScore.rounded())
     }
 
+    /// `true` solo si hubo al menos un día con actividades evaluables.
+    ///
+    /// Sin esto, una semana sin nada devolvería 0 y la UI mostraría "0 %", que es
+    /// justo lo que §9.1 prohíbe: un día sin actividades no es un incumplimiento.
+    public var hasData: Bool {
+        dailyScores.contains(where: \.hasData)
+    }
+
     public var state: State {
         .forScore(rawScore)
     }

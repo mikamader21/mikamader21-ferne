@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 /// Barra inferior principal (MASTER_SPEC §5): Inicio · Progreso · Destellos · Perfil.
@@ -58,5 +59,8 @@ struct MainTabView: View {
 }
 
 #Preview("Pestañas · noche") {
-    MainTabView().environment(ThemeController.preview(.noche))
+    MainTabView()
+        .environment(ThemeController.preview(.noche))
+        .environment(UserPreferences())
+        .modelContainer(for: ActivityRecord.self, inMemory: true)
 }

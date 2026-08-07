@@ -1,31 +1,54 @@
+import SwiftData
 import SwiftUI
 
-/// Pestaña Destellos (MASTER_SPEC §5): mensaje del día, recomendaciones y espacio personal.
-/// Fase 0: esqueleto con el formato obligatorio de recomendación (§9.3). Contenido real en Fases 5–6.
+/// Pestaña Destellos (MASTER_SPEC §5): mensaje del día y espacio personal.
+///
+/// Nada inventado: sin actividades no hay recomendaciones, porque una recomendación
+/// necesita una observación verificable detrás (§9.3).
 struct SparksView: View {
-    @Environment(ThemeController.self) private var theme
+    @Environment(ThemeController.self) private var themeController
+    @Environment(UserPreferences.self) private var preferences
+
+    @Query private var allActivities: [ActivityRecord]
 
     var body: some View {
-        FerneScreen(sceneIntensity: 0.6) {
+        FerneScreen(sceneIntensity: 0.7) {
             ScrollView {
                 VStack(alignment: .leading, spacing: FerneSpacing.md) {
                     Text("Destellos")
                         .font(FerneFont.greeting)
-                        .foregroundStyle(theme.theme.titleColor)
-                        .padding(.top, FerneSpacing.xl)
+                        .foregroundStyle(FerneColor.brandMagenta)
+                        .padding(.top, 150)
 
                     FerneCard {
                         VStack(alignment: .leading, spacing: FerneSpacing.xs) {
-                            Text("Mensaje de hoy")
-                                .font(FerneFont.meta)
+                            Text("MENSAJE DE HOY")
+                                .font(FerneFont.labelCaps)
+                                .kerning(1.2)
                                 .foregroundStyle(FerneColor.textTertiary)
-                            Text(PreviewData.dailyMessage)
+                            Text(message)
                                 .font(FerneFont.body)
                                 .foregroundStyle(FerneColor.textPrimary)
                         }
                     }
 
-                    RecommendationCard(recommendation: .example)
+                    if allActivities.isEmpty {
+                        FerneCard(padding: FerneSpacing.lg) {
+                            VStack(spacing: FerneSpacing.xs) {
+                                Image(systemName: "wand.and.stars")
+                                    .font(.system(size: 34, weight: .light))
+                                    .foregroundStyle(FerneColor.accentSecondary)
+                                Text("Las recomendaciones llegarán solas")
+                                    .font(FerneFont.sectionTitle)
+                                    .foregroundStyle(FerneColor.textPrimary)
+                                Text("Cuando lleves unos días organizando, aquí verás qué te funciona mejor.")
+                                    .font(FerneFont.secondary)
+                                    .foregroundStyle(FerneColor.textSecondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
                 }
                 .padding(.horizontal, FerneSpacing.screenHorizontal)
                 .padding(.bottom, FerneSpacing.xxl)
@@ -34,34 +57,22 @@ struct SparksView: View {
         }
         .accessibilityIdentifier("screen.sparks")
     }
-}
 
-/// Pantalla 39 — Recomendaciones FERNÉ. Siempre explica **por qué** y **qué cambiará**.
-struct RecommendationCard: View {
-    let recommendation: Recommendation
-
-    var body: some View {
-        FerneCard {
-            VStack(alignment: .leading, spacing: FerneSpacing.xs) {
-                Text(recommendation.observation)
-                    .font(FerneFont.cardTitle)
-                    .foregroundStyle(FerneColor.textPrimary)
-                Text(recommendation.explanation)
-                    .font(FerneFont.secondary)
-                    .foregroundStyle(FerneColor.textSecondary)
-                Text(recommendation.suggestedChange)
-                    .font(FerneFont.secondary)
-                    .foregroundStyle(FerneColor.textTertiary)
-                if let actionLabel = recommendation.actionLabel {
-                    Button(actionLabel) {}
-                        .buttonStyle(.ferneSecondary)
-                        .padding(.top, FerneSpacing.xxs)
-                }
-            }
+    private var message: String {
+        guard preferences.wantsDailyMessage else {
+            return "Tienes los mensajes desactivados. Puedes volver a activarlos en Perfil."
+        }
+        switch themeController.phase {
+        case .manana: "Hoy no tienes que hacerlo todo. Solo lo que importa, a tu ritmo."
+        case .tarde: "Si algo se movió de sitio, no pasa nada. Sigues avanzando."
+        case .noche: "Cerrar el día también cuenta. Descansa bien, \(preferences.preferredName)."
         }
     }
 }
 
 #Preview("Destellos") {
-    NavigationStack { SparksView() }.environment(ThemeController.preview(.manana))
+    NavigationStack { SparksView() }
+        .environment(ThemeController.preview(.manana))
+        .environment(UserPreferences())
+        .modelContainer(for: ActivityRecord.self, inMemory: true)
 }

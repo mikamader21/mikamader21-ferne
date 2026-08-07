@@ -64,15 +64,17 @@ public enum FerneColor {
     public static let dawnPeach = Color(hex: 0xFFB68C)
     /// `#8A5E86` — Ciruela nocturno. Transición entre `deepPlum` y la lavanda.
     public static let nightPlum = Color(hex: 0x8A5E86)
-    /// `#FDF3F6` — Blanco luminoso nacarado. Núcleo de la luna y destellos.
-    public static let luminousWhite = Color(hex: 0xFDF3F6)
-
-    /// Los colores atmosféricos, para auditoría y pruebas.
+    /// Los seis colores atmosféricos, para auditoría y pruebas.
     public static let atmospheric: [Color] = [
-        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum, luminousWhite
+        skyCyan, softIndigo, lavender, dawnPink, dawnPeach, nightPlum
     ]
 
     // MARK: - Rojo reservado
+
+    /// `#FDF3F6` — Blanco luminoso nacarado. Núcleo de la luna, destellos, halos
+    /// y realce de texto sobre la escena. Es **funcional**, no atmosférico: puede
+    /// aparecer en cualquier capa.
+    public static let luminousWhite = Color(hex: 0xFDF3F6)
 
     /// **Uso restringido.** Solo errores técnicos y pagos vencidos (§4.2).
     /// Nunca para juzgar hábitos, score ni actividades sin completar.

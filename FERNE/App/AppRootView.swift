@@ -1,26 +1,45 @@
+import SwiftData
 import SwiftUI
 
-/// Raíz de navegación. Fase 0 entrega el esqueleto: Splash → contenido con 4 pestañas.
-/// El onboarding real (pantallas 02 y 03) llega en la Fase 2.
+/// Raíz de navegación: Splash → (onboarding la primera vez) → contenido.
 struct AppRootView: View {
     @Environment(ThemeController.self) private var theme
+    @Environment(UserPreferences.self) private var preferences
+
     @State private var isShowingSplash = !UITestConfiguration.skipsSplash
+    @State private var hasFinishedOnboarding = false
 
     var body: some View {
         ZStack {
-            MainTabView()
+            content
                 .opacity(isShowingSplash ? 0 : 1)
 
             if isShowingSplash {
-                SplashView { isShowingSplash = false }
-                    .transition(.opacity)
-                    .zIndex(1)
+                SplashView {
+                    withAnimation(FerneMotion.ease) { isShowingSplash = false }
+                }
+                .transition(.opacity)
+                .zIndex(1)
             }
         }
         .ferneTheme(theme.theme)
         .animation(FerneMotion.ease, value: isShowingSplash)
         .forcedReduceMotionForScreenshots()
         .accessibilityIdentifier("ferne.root")
+        .onAppear { hasFinishedOnboarding = preferences.hasCompletedOnboarding }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if preferences.hasCompletedOnboarding || hasFinishedOnboarding {
+            MainTabView()
+                .transition(.opacity)
+        } else {
+            OnboardingFlowView(preferences: preferences) {
+                withAnimation(FerneMotion.expressive) { hasFinishedOnboarding = true }
+            }
+            .transition(.opacity)
+        }
     }
 }
 
@@ -33,8 +52,6 @@ private extension View {
     ///
     /// Se escribe `\.ferneReduceMotionOverride`, no `\.accessibilityReduceMotion`:
     /// esta última es de solo lectura y no admite `.environment(_:_:)`.
-    ///
-    /// No sustituye a verificar el ajuste real del sistema: ver `docs/VISUAL_QA_MATRIX.md`.
     @ViewBuilder
     func forcedReduceMotionForScreenshots() -> some View {
         if UITestConfiguration.forcesReduceMotion {
@@ -46,5 +63,8 @@ private extension View {
 }
 
 #Preview("Raíz · mañana") {
-    AppRootView().environment(ThemeController.preview(.manana))
+    AppRootView()
+        .environment(ThemeController.preview(.manana))
+        .environment(UserPreferences())
+        .modelContainer(for: ActivityRecord.self, inMemory: true)
 }

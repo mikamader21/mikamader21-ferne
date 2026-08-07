@@ -73,7 +73,9 @@ fi
 
 # 7. Los colores atmosféricos solo pueden vivir en escenas y temas (decisión D-022).
 #    Si aparecen en una vista de Features, se estarían usando en UI, que está prohibido.
-ATMOSPHERIC='skyCyan|softIndigo|lavender|dawnPink|dawnPeach|nightPlum|luminousWhite'
+# Seis tokens. `luminousWhite` NO está: es funcional (halos, destellos, realce
+# de texto) y puede aparecer en cualquier capa.
+ATMOSPHERIC='skyCyan|softIndigo|lavender|dawnPink|dawnPeach|nightPlum'
 ATM_HITS=$(grep -rn --include='*.swift' -E "FerneColor\.($ATMOSPHERIC)" "$SRC" \
   | grep -vE 'DesignSystem/(Scenes|Theme)/' \
   | grep -v 'DesignSystem/Tokens/FerneColor.swift' || true)

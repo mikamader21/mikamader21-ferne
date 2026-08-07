@@ -69,3 +69,4 @@ gallery/
 pipeline-*.log
 error-run-*.log
 FERNE-BUILD-LOG/
+FERNE-APP/

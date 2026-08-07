@@ -50,6 +50,12 @@ public enum UITestConfiguration {
         value(for: "-FERNESkipSplash") == "1"
     }
 
+    /// Fuerza que el onboarding vuelva a aparecer, para poder capturarlo.
+    /// Solo tiene efecto bajo UI tests.
+    public static var resetsOnboarding: Bool {
+        value(for: "-FERNEResetOnboarding") == "1"
+    }
+
     /// Fuerza el comportamiento de Reduce Motion **a nivel de app**.
     ///
     /// **Limitación honesta:** esto NO activa el ajuste real de iOS. Sirve para

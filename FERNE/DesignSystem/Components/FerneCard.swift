@@ -20,19 +20,42 @@ public struct FerneCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 RoundedRectangle(cornerRadius: FerneRadius.card, style: .continuous)
-                    .fill(backgroundColor)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        // Un velo cálido sobre el material: sin él, el vidrio de iOS
+                        // tira a gris y la tarjeta pierde la temperatura de FERNÉ.
+                        RoundedRectangle(cornerRadius: FerneRadius.card, style: .continuous)
+                            .fill(backgroundColor)
+                    }
             }
             .overlay {
+                // Borde luminoso: blanco arriba, rosa abajo. Da el canto de vidrio.
                 RoundedRectangle(cornerRadius: FerneRadius.card, style: .continuous)
-                    .strokeBorder(FerneColor.cardBorder, lineWidth: 1)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                FerneColor.luminousWhite.opacity(0.85),
+                                FerneColor.softPink.opacity(0.35)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             }
             .shadow(color: FerneColor.cardShadow, radius: FerneShadow.cardRadius, y: FerneShadow.cardY)
+            .shadow(color: FerneColor.deepPlum.opacity(0.05), radius: 3, y: 1)
     }
 
+    /// Velo sobre el material. Con `Reduce Transparency` pasa a sólido: el ajuste
+    /// existe precisamente para que no haya nada translúcido.
     private var backgroundColor: Color {
-        // En noche la tarjeta es translúcida; si el usuario reduce transparencia, se vuelve sólida.
-        guard theme.phase == .noche, !reduceTransparency else { return FerneColor.warmWhite }
-        return theme.cardBackground
+        if reduceTransparency {
+            return theme.phase == .noche ? FerneColor.secondaryPlum : FerneColor.warmWhite
+        }
+        return theme.phase == .noche
+            ? FerneColor.warmWhite.opacity(0.10)
+            : FerneColor.warmWhite.opacity(0.55)
     }
 }
 

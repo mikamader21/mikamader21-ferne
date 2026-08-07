@@ -75,25 +75,52 @@ struct CelestialBodyView: View {
 
     var body: some View {
         ZStack {
+            // Resplandor exterior amplio: es lo que da sensación de luz real, en
+            // lugar de un círculo pegado encima del fondo.
             Circle()
                 .fill(theme.celestialGlow)
-                .scaleEffect(2.4)
-                .blur(radius: 12)
+                .scaleEffect(3.4)
+                .blur(radius: 26)
+
+            Circle()
+                .fill(theme.celestialGlow)
+                .scaleEffect(2.0)
+                .blur(radius: 8)
+
+            if theme.celestialBody == .sun {
+                // Rayos: 12 destellos, largos y cortos alternados.
+                ForEach(0 ..< 12, id: \.self) { index in
+                    Capsule()
+                        .fill(theme.celestialHalo.opacity(index.isMultiple(of: 2) ? 0.30 : 0.16))
+                        .frame(width: 3, height: index.isMultiple(of: 2) ? 46 : 28)
+                        .offset(y: -62)
+                        .rotationEffect(.degrees(Double(index) * 30))
+                        .blur(radius: 1.5)
+                }
+            }
 
             Circle()
                 .fill(theme.celestialCore)
-                .shadow(color: theme.celestialHalo.opacity(0.6), radius: 30)
+                .shadow(color: theme.celestialHalo.opacity(0.75), radius: 40)
+                .shadow(color: theme.celestialHalo.opacity(0.45), radius: 90)
 
             if theme.celestialBody == .moon {
                 // Cráteres suaves: la luna no es un círculo plano.
                 Circle()
-                    .fill(theme.celestialHalo.opacity(0.18))
-                    .frame(width: 22, height: 22)
-                    .offset(x: -14, y: -10)
+                    .fill(theme.celestialHalo.opacity(0.20))
+                    .frame(width: 26, height: 26)
+                    .offset(x: -16, y: -12)
+                    .blur(radius: 1)
                 Circle()
-                    .fill(theme.celestialHalo.opacity(0.14))
-                    .frame(width: 13, height: 13)
-                    .offset(x: 16, y: 12)
+                    .fill(theme.celestialHalo.opacity(0.16))
+                    .frame(width: 15, height: 15)
+                    .offset(x: 18, y: 14)
+                    .blur(radius: 1)
+                Circle()
+                    .fill(theme.celestialHalo.opacity(0.12))
+                    .frame(width: 9, height: 9)
+                    .offset(x: -6, y: 20)
+                    .blur(radius: 1)
             }
         }
         .aspectRatio(1, contentMode: .fit)
@@ -113,12 +140,15 @@ struct CloudLayer: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                cloud(width: geometry.size.width * 0.62)
-                    .position(x: geometry.size.width * 0.30, y: geometry.size.height * 0.26)
-                    .offset(x: animate ? 18 : -18)
-                cloud(width: geometry.size.width * 0.45)
-                    .position(x: geometry.size.width * 0.78, y: geometry.size.height * 0.36)
-                    .offset(x: animate ? -14 : 14)
+                cloud(width: geometry.size.width * 0.72, opacity: 0.9)
+                    .position(x: geometry.size.width * 0.28, y: geometry.size.height * 0.20)
+                    .offset(x: animate ? 22 : -22)
+                cloud(width: geometry.size.width * 0.52, opacity: 0.7)
+                    .position(x: geometry.size.width * 0.80, y: geometry.size.height * 0.31)
+                    .offset(x: animate ? -18 : 18)
+                cloud(width: geometry.size.width * 0.44, opacity: 0.5)
+                    .position(x: geometry.size.width * 0.45, y: geometry.size.height * 0.40)
+                    .offset(x: animate ? 12 : -12)
             }
             .animation(
                 animate ? .easeInOut(duration: FerneMotion.cloudDrift).repeatForever(autoreverses: true) : nil,
@@ -127,11 +157,22 @@ struct CloudLayer: View {
         }
     }
 
-    private func cloud(width: CGFloat) -> some View {
-        Capsule()
-            .fill(color)
-            .frame(width: width, height: width * 0.22)
-            .blur(radius: 18)
+    /// Una nube es un cuerpo más dos lóbulos: una cápsula sola parece una barra.
+    private func cloud(width: CGFloat, opacity: Double) -> some View {
+        ZStack {
+            Capsule()
+                .fill(color.opacity(opacity))
+                .frame(width: width, height: width * 0.20)
+            Circle()
+                .fill(color.opacity(opacity))
+                .frame(width: width * 0.34, height: width * 0.34)
+                .offset(x: -width * 0.16, y: -width * 0.07)
+            Circle()
+                .fill(color.opacity(opacity * 0.9))
+                .frame(width: width * 0.26, height: width * 0.26)
+                .offset(x: width * 0.18, y: -width * 0.05)
+        }
+        .blur(radius: 20)
     }
 }
 
