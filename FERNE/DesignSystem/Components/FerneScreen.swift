@@ -24,6 +24,37 @@ public struct FerneScreen<Content: View>: View {
     }
 }
 
+/// Bloque de texto colocado **sobre la escena atmosférica**.
+///
+/// Resuelve el problema de contraste: en mañana y tarde el cielo tiene zonas muy
+/// claras (sol, nubes) donde cualquier color pierde fuerza. Debajo del texto se
+/// coloca un velo del blanco cálido de la paleta —nunca una caja negra— y el
+/// texto va en ciruela oscuro. De noche, el cielo ya es oscuro y el texto va claro
+/// sin velo.
+public struct AtmosphericText<Content: View>: View {
+    @Environment(\.ferneTheme) private var theme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .padding(.horizontal, FerneSpacing.xs)
+            .padding(.vertical, FerneSpacing.xs)
+            .background {
+                if theme.needsTextScrim {
+                    RoundedRectangle(cornerRadius: FerneRadius.control, style: .continuous)
+                        .fill(reduceTransparency ? AnyShapeStyle(FerneColor.warmWhite) : AnyShapeStyle(FerneColor.textScrim))
+                        .blur(radius: reduceTransparency ? 0 : 10)
+                }
+            }
+    }
+}
+
 /// Estado vacío amable y con ilustración implícita de la escena. Nunca una pantalla en blanco.
 public struct FerneEmptyState: View {
     @Environment(\.ferneTheme) private var theme
@@ -45,12 +76,12 @@ public struct FerneEmptyState: View {
                 .foregroundStyle(FerneColor.accentSecondary)
             Text(title)
                 .font(FerneFont.sectionTitle)
-                .foregroundStyle(theme.titleColor)
+                .foregroundStyle(theme.textOnAtmosphere)
                 .multilineTextAlignment(.center)
             if let message {
                 Text(message)
                     .font(FerneFont.secondary)
-                    .foregroundStyle(theme.bodyColor)
+                    .foregroundStyle(theme.secondaryOnAtmosphere)
                     .multilineTextAlignment(.center)
             }
         }

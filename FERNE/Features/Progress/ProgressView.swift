@@ -27,11 +27,19 @@ struct ProgressView: View {
     }
 
     private var weekly: WeeklyScore {
-        ScoreEngine(calendar: calendar).weeklyScore(weekContaining: now, activities: snapshots)
+        ScoreEngine(calendar: calendar).weeklyScore(weekContaining: now, activities: snapshots, now: now)
     }
 
     private var todayScore: DailyScore {
-        ScoreEngine(calendar: calendar).dailyScore(for: now, activities: snapshots)
+        ScoreEngine(calendar: calendar).dailyScore(for: now, activities: snapshots, now: now)
+    }
+
+    /// Actividades de hoy, en orden, para la línea temporal.
+    private var todayTimeline: [ActivitySnapshot] {
+        let target = calendar.startOfDay(for: now)
+        return snapshots
+            .filter { $0.day(in: calendar) == target }
+            .sorted { $0.startDate < $1.startDate }
     }
 
     private var weekSnapshots: [ActivitySnapshot] {
@@ -40,19 +48,30 @@ struct ProgressView: View {
         return snapshots.filter { $0.day(in: calendar) >= start && $0.day(in: calendar) < end }
     }
 
+    /// Magenta sobre cielo claro, blanco luminoso sobre cielo nocturno.
+    private var titleColor: Color {
+        themeController.theme.hasDarkAtmosphere ? FerneColor.luminousWhite : FerneColor.brandMagenta
+    }
+
     var body: some View {
         FerneScreen(sceneIntensity: 0.7) {
             ScrollView {
                 VStack(alignment: .leading, spacing: FerneSpacing.md) {
-                    Text("Así va tu semana, \(preferences.preferredName)")
-                        .font(FerneFont.greeting)
-                        .foregroundStyle(FerneColor.brandMagenta)
-                        .padding(.top, 150)
+                    AtmosphericText {
+                        Text("Así va tu semana, \(preferences.preferredName)")
+                            .font(FerneFont.greeting)
+                            .foregroundStyle(titleColor)
+                    }
+                    .padding(.top, 150)
 
                     scoreCard
 
+                    if !todayTimeline.isEmpty {
+                        timelineCard
+                    }
+
                     if weekly.hasData {
-                        countersCard
+                        CountersCard(snapshots: weekSnapshots)
                         breakdownCard
                         insightsCard
                     }
@@ -107,10 +126,29 @@ struct ProgressView: View {
                         .font(FerneFont.cardTitle)
                         .foregroundStyle(FerneColor.brandMagenta)
                 } else {
-                    Text("Tu progreso aparecerá cuando empieces a construir tu día.")
+                    Text("Tu progreso aparecerá cuando confirmes tus primeras actividades.")
                         .font(FerneFont.body)
                         .foregroundStyle(FerneColor.textSecondary)
                         .multilineTextAlignment(.center)
+                }
+
+                if todayScore.hasData || todayScore.openCount > 0 {
+                    VStack(spacing: 2) {
+                        if todayScore.hasData {
+                            Text("\(todayScore.displayPercentage) % hasta ahora")
+                                .font(FerneFont.cardTitle)
+                                .foregroundStyle(FerneColor.textPrimary)
+                        }
+                        Text(todayScore.confirmedSummary)
+                            .font(FerneFont.meta)
+                            .foregroundStyle(FerneColor.textSecondary)
+                        if let remaining = todayScore.remainingSummary {
+                            Text(remaining)
+                                .font(FerneFont.meta)
+                                .foregroundStyle(FerneColor.textMuted)
+                        }
+                    }
+                    .multilineTextAlignment(.center)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -119,49 +157,26 @@ struct ProgressView: View {
 
     // MARK: - Contadores
 
-    private var countersCard: some View {
+    // MARK: - Línea temporal
+
+    /// El score debe poder explicarse: aquí se ve, actividad por actividad, de dónde
+    /// sale cada punto. Un número sin desglose es una caja negra.
+    private var timelineCard: some View {
         FerneCard {
-            HStack(spacing: FerneSpacing.sm) {
-                counter(
-                    value: weekSnapshots.filter(\.isCompleted).count,
-                    label: "COMPLETADAS",
-                    symbol: "checkmark.circle.fill",
-                    tint: FerneColor.positive
-                )
-                counter(
-                    value: weekSnapshots.filter { $0.isEvaluable && !$0.isCompleted }.count,
-                    label: "PENDIENTES",
-                    symbol: "clock.fill",
-                    tint: FerneColor.attention
-                )
-                counter(
-                    value: weekSnapshots.filter(\.wasRescheduled).count,
-                    label: "REPROGRAMADAS",
-                    symbol: "arrow.triangle.2.circlepath",
-                    tint: FerneColor.accentSecondary
-                )
+            VStack(alignment: .leading, spacing: FerneSpacing.sm) {
+                Text("TU DÍA, PASO A PASO")
+                    .font(FerneFont.labelCaps)
+                    .kerning(1.2)
+                    .foregroundStyle(FerneColor.textMuted)
+
+                ForEach(todayTimeline) { activity in
+                    TimelineRow(activity: activity, now: now, calendar: calendar)
+                    if activity.id != todayTimeline.last?.id {
+                        Divider().overlay(FerneColor.cardBorder)
+                    }
+                }
             }
         }
-    }
-
-    private func counter(value: Int, label: String, symbol: String, tint: Color) -> some View {
-        VStack(spacing: FerneSpacing.xxs) {
-            Image(systemName: symbol)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 36, height: 36)
-                .background { Circle().fill(tint.opacity(0.18)) }
-            Text("\(value)")
-                .font(FerneFont.sectionTitle)
-                .foregroundStyle(FerneColor.textPrimary)
-            Text(label)
-                .font(FerneFont.labelCaps)
-                .kerning(0.8)
-                .foregroundStyle(FerneColor.textTertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Desglose
@@ -269,41 +284,4 @@ struct ProgressView: View {
         let target = weekly.hasData ? weekly.rawScore / 100 : 0
         withAnimation(FerneMotion.progress.delay(0.15)) { ringValue = target }
     }
-}
-
-private struct InsightCard: View {
-    let symbol: String
-    let tint: Color
-    let caption: String
-    let text: String
-
-    var body: some View {
-        FerneCard {
-            HStack(alignment: .top, spacing: FerneSpacing.sm) {
-                Image(systemName: symbol)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 38, height: 38)
-                    .background { Circle().fill(tint.opacity(0.20)) }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(caption)
-                        .font(FerneFont.labelCaps)
-                        .kerning(1.0)
-                        .foregroundStyle(FerneColor.textTertiary)
-                    Text(text)
-                        .font(FerneFont.body)
-                        .foregroundStyle(FerneColor.textPrimary)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-#Preview("Progreso · sin datos") {
-    NavigationStack { ProgressView() }
-        .environment(ThemeController.preview(.tarde))
-        .environment(UserPreferences())
-        .modelContainer(for: ActivityRecord.self, inMemory: true)
 }

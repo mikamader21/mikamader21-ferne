@@ -76,6 +76,38 @@ public struct ActivitySnapshot: Identifiable, Hashable, Codable, Sendable {
         status == .reprogramada || rescheduledFrom != nil
     }
 
+    /// Fin de la ventana de cumplimiento. Si no hay `endDate`, se usa la duración
+    /// sugerida de la categoría: sin ventana no se sabe cuándo preguntar el resultado.
+    public func windowEnd(calendar: Calendar) -> Date {
+        if let endDate {
+            return endDate
+        }
+        return calendar.date(
+            byAdding: .minute,
+            value: category.suggestedDurationMinutes,
+            to: startDate
+        ) ?? startDate
+    }
+
+    /// `true` si su ventana ya terminó respecto a `now`.
+    public func hasClosed(at now: Date, calendar: Calendar) -> Bool {
+        windowEnd(calendar: calendar) <= now
+    }
+
+    /// `true` si está ocurriendo ahora mismo.
+    public func isRunning(at now: Date, calendar: Calendar) -> Bool {
+        startDate <= now && now < windowEnd(calendar: calendar)
+    }
+
+    /// Puntos que aporta, **solo** si su ventana cerró.
+    ///
+    /// Una actividad futura no vale cero: no vale nada todavía. Es la diferencia
+    /// entre "no lo hizo" y "aún no le tocaba".
+    public func contribution(at now: Date, calendar: Calendar) -> Double? {
+        guard hasClosed(at: now, calendar: calendar) else { return nil }
+        return status.earnedFraction
+    }
+
     /// Día natural al que pertenece la actividad, con calendario explícito.
     /// Resuelve el caso "cruce de medianoche" de §9.4: la actividad pertenece al día de su `startDate`.
     public func day(in calendar: Calendar) -> Date {

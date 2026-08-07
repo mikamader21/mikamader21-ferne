@@ -46,11 +46,53 @@ final class ActivityCategoryTests: XCTestCase {
     }
 
     func testStatusEvaluabilityMatchesScoreRules() {
-        XCTAssertTrue(ActivityStatus.programada.isEvaluable)
         XCTAssertTrue(ActivityStatus.completada.isEvaluable)
-        XCTAssertTrue(ActivityStatus.pendiente.isEvaluable)
+        XCTAssertTrue(ActivityStatus.parcial.isEvaluable)
         XCTAssertTrue(ActivityStatus.omitida.isEvaluable)
-        XCTAssertFalse(ActivityStatus.cancelada.isEvaluable)
+
+        XCTAssertFalse(ActivityStatus.programada.isEvaluable)
+        XCTAssertFalse(ActivityStatus.proxima.isEvaluable)
+        XCTAssertFalse(ActivityStatus.enCurso.isEvaluable, "Empezar no es cumplir.")
+        XCTAssertFalse(ActivityStatus.sinConfirmar.isEvaluable, "Falta la respuesta, no es un fallo.")
         XCTAssertFalse(ActivityStatus.reprogramada.isEvaluable)
+        XCTAssertFalse(ActivityStatus.cancelada.isEvaluable)
+    }
+
+    func testEarnedFractionMatchesTheAgreedPoints() {
+        XCTAssertEqual(ActivityStatus.completada.earnedFraction, 1.0)
+        XCTAssertEqual(ActivityStatus.parcial.earnedFraction, 0.5)
+        XCTAssertEqual(ActivityStatus.omitida.earnedFraction, 0.0)
+        XCTAssertNil(ActivityStatus.enCurso.earnedFraction)
+        XCTAssertNil(ActivityStatus.sinConfirmar.earnedFraction)
+    }
+
+    func testLegacyPendienteMapsToUnconfirmed() {
+        // `pendiente` era el nombre anterior. Los datos ya guardados deben seguir leyéndose.
+        XCTAssertEqual(ActivityStatus.fromStored("pendiente"), .sinConfirmar)
+        XCTAssertEqual(ActivityStatus.fromStored("completada"), .completada)
+        XCTAssertEqual(ActivityStatus.fromStored("valor-inexistente"), .programada)
+    }
+
+    func testEveryCategoryHasSuggestedDurationAndVerb() {
+        for category in ActivityCategory.allCases {
+            XCTAssertGreaterThan(category.suggestedDurationMinutes, 0)
+            XCTAssertFalse(category.completionVerb.isEmpty)
+            XCTAssertFalse(
+                ScoreLanguage.containsForbiddenTerm(category.completionVerb),
+                "El verbo '\(category.completionVerb)' usa vocabulario prohibido."
+            )
+        }
+    }
+
+    func testCompletionVerbsAreSpecificPerCategory() {
+        XCTAssertEqual(ActivityCategory.despertar.completionVerb, "Ya me levanté")
+        XCTAssertEqual(ActivityCategory.comida.completionVerb, "Ya comí")
+        XCTAssertEqual(ActivityCategory.gym.completionVerb, "Entrenamiento cumplido")
+        XCTAssertEqual(ActivityCategory.lectura.completionVerb, "Terminé mi lectura")
+        XCTAssertEqual(ActivityCategory.live.completionVerb, "Hice el live")
+        XCTAssertEqual(ActivityCategory.pago.completionVerb, "Recibo pagado")
+        XCTAssertEqual(ActivityCategory.dormir.completionVerb, "Ya estoy en la cama")
+        XCTAssertEqual(ActivityCategory.trabajo.completionVerb, "Tarea terminada")
+        XCTAssertEqual(ActivityCategory.personal.completionVerb, "Actividad cumplida")
     }
 }

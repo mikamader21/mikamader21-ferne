@@ -49,7 +49,7 @@ enum TestSupport {
             startDate: date,
             priority: priority,
             status: status,
-            completedAt: status == .completada ? date : nil,
+            completedAt: status == .completada || status == .parcial ? date : nil,
             createdAt: date,
             updatedAt: date
         )

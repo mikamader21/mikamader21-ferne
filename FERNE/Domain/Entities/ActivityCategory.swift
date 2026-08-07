@@ -67,4 +67,41 @@ public enum ActivityCategory: String, CaseIterable, Codable, Sendable {
         default: false
         }
     }
+
+    /// Duración sugerida en minutos cuando Fer no indica una.
+    ///
+    /// Hace falta para saber **cuándo termina la ventana** de una actividad y poder
+    /// preguntar por su resultado. Es una sugerencia: siempre es editable.
+    public var suggestedDurationMinutes: Int {
+        switch self {
+        case .despertar: 15
+        case .comida: 45
+        case .gym: 60
+        case .trabajo: 90
+        case .live: 60
+        case .lectura: 30
+        case .pago: 10
+        case .rutina: 30
+        case .evento: 60
+        case .nota: 10
+        case .dormir: 30
+        case .personal: 45
+        }
+    }
+
+    /// Verbo con el que se confirma el cumplimiento. Hablar en concreto ("Ya comí")
+    /// es más cálido y más claro que un "Completar" genérico.
+    public var completionVerb: String {
+        switch self {
+        case .despertar: "Ya me levanté"
+        case .comida: "Ya comí"
+        case .gym: "Entrenamiento cumplido"
+        case .lectura: "Terminé mi lectura"
+        case .live: "Hice el live"
+        case .pago: "Recibo pagado"
+        case .dormir: "Ya estoy en la cama"
+        case .trabajo: "Tarea terminada"
+        case .rutina, .evento, .nota, .personal: "Actividad cumplida"
+        }
+    }
 }

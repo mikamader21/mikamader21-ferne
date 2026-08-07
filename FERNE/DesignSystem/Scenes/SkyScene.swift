@@ -39,7 +39,9 @@ public struct SkyScene: View {
                 }
 
                 CelestialBodyView(theme: theme, animate: animate && !reduceMotion)
-                    .frame(width: geometry.size.width * 0.42)
+                    // La luna se dibuja un 28 % menor que el sol: a igual tamaño
+                    // dominaba la composición y competía con el texto.
+                    .frame(width: geometry.size.width * (theme.celestialBody == .moon ? 0.30 : 0.42))
                     .position(
                         x: geometry.size.width * 0.72,
                         y: geometry.size.height * (theme.phase == .tarde ? 0.14 : 0.20)
@@ -100,7 +102,16 @@ struct CelestialBodyView: View {
             }
 
             Circle()
-                .fill(theme.celestialCore)
+                .fill(
+                    // Degradado en lugar de relleno plano: sin él la luna parece un
+                    // disco blanco sobreexpuesto, sin volumen.
+                    RadialGradient(
+                        colors: [theme.celestialCore, theme.celestialCore.opacity(0.82)],
+                        center: UnitPoint(x: 0.38, y: 0.34),
+                        startRadius: 2,
+                        endRadius: 70
+                    )
+                )
                 .shadow(color: theme.celestialHalo.opacity(0.75), radius: 40)
                 .shadow(color: theme.celestialHalo.opacity(0.45), radius: 90)
 

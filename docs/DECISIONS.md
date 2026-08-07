@@ -633,3 +633,58 @@ están protegidos. Corre en el quality gate, en el job `preflight` del workflow 
 
 **Nota de método:** toda esta verificación se hizo con un `GIT_DIR` temporal **fuera** del
 proyecto. La ruta oficial sigue sin `.git`, y no se ha hecho ningún commit.
+
+---
+
+### D-031 · La noche empieza a las 18:00, no a las 19:00
+
+**Decisión (de Mika):** las franjas pasan a ser 05:00–11:59 mañana, 12:00–17:59 tarde,
+18:00–04:59 noche.
+
+**Contradice `MASTER_SPEC.md` §4.5**, que fijaba la noche a las 19:00. Se registra aquí
+porque §0.10 obliga a documentar cualquier desviación de la especificación. El motivo es
+observacional: a las 18:00 la luz ya no acompaña una escena diurna.
+
+**Además:** el proveedor de franja pasa a `Calendar.autoupdatingCurrent`. Si Fer viaja o
+cambia la zona horaria del iPhone, la escena sigue su hora local sin reiniciar la app.
+`ThemeController` programa un único despertar en la frontera siguiente en lugar de sondear
+el reloj, y lo recalcula al volver del segundo plano y ante `NSSystemTimeZoneDidChange`.
+
+**Verificado** con ocho pruebas de límite exacto (04:59, 05:00, 11:59, 12:00, 17:59, 18:00,
+23:59) más una de cambio de zona horaria: el mismo instante da `tarde` en Bogotá y `noche`
+en Madrid.
+
+**Efecto colateral:** el saludo nocturno pierde el emoji 🌙 que fijaba §4.5. La escena ya
+muestra una luna; repetirla en el texto era redundante. El detalle discreto lo aporta ahora
+un símbolo en la vista.
+
+---
+
+### D-032 · El score solo puntúa lo que venció y tiene respuesta
+
+**Decisión:** se amplía `ActivityStatus` a nueve estados y el score pasa a ser
+**provisional durante el día**.
+
+| Estado | Puntos | Por qué |
+|---|---|---|
+| completada | 1.0 | |
+| parcial | 0.5 | |
+| omitida | 0.0 | Fer confirmó que no la hizo |
+| programada / proxima | — | Aún puede hacerse. Contarla cero sería castigar el futuro |
+| enCurso | — | **Empezar no es cumplir** |
+| sinConfirmar | — | Venció sin respuesta. No es un fallo: falta la confirmación |
+| reprogramada | — | Mover algo no es fallar (§9.1) |
+| cancelada | — | Excluida por especificación |
+
+La ventana de cumplimiento se calcula con `endDate` o, si no lo hay, con la duración
+sugerida de la categoría. Sin ventana no se puede saber cuándo preguntar por el resultado.
+
+**FERNÉ no marca nada como cumplido por su cuenta.** El paso de la hora no es una
+confirmación: por eso `sinConfirmar` y `omitida` son estados distintos.
+
+**Migración:** el `pendiente` de la versión anterior se lee como `sinConfirmar`
+(`ActivityStatus.fromStored`). Los `rawValue` guardados siguen siendo válidos.
+
+**Verificado** con 55 pruebas de dominio, incluidas las nuevas: futuras excluidas, en curso
+excluida, parcial = 50 %, sin confirmar separado del incumplimiento, ventana por categoría y
+semana sin días futuros en cero.

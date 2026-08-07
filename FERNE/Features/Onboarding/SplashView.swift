@@ -50,15 +50,21 @@ struct SplashView: View {
                 Text("FERNÉ")
                     .font(FerneFont.display)
                     .kerning(8)
-                    .foregroundStyle(FerneColor.brandMagenta)
-                    .shadow(color: FerneColor.luminousWhite.opacity(0.7), radius: 12)
+                    // Magenta sobre el amanecer, blanco luminoso sobre la noche.
+                    .foregroundStyle(theme.hasDarkAtmosphere ? FerneColor.luminousWhite : FerneColor.brandMagenta)
+                    .shadow(
+                        color: theme.hasDarkAtmosphere
+                            ? FerneColor.deepPlum.opacity(0.6)
+                            : FerneColor.luminousWhite.opacity(0.9),
+                        radius: 14
+                    )
                     .opacity(logoVisible ? 1 : 0)
                     .offset(y: logoVisible || reduceMotion ? 0 : 18)
 
                 Text("Tu día, a tu ritmo")
                     .font(FerneFont.secondary)
                     .kerning(1.5)
-                    .foregroundStyle(theme.bodyColor)
+                    .foregroundStyle(theme.secondaryOnAtmosphere)
                     .opacity(taglineVisible ? 1 : 0)
                     .offset(y: taglineVisible || reduceMotion ? 0 : 10)
 

@@ -22,6 +22,9 @@ public final class ActivityRecord {
     public var statusRaw: String = ActivityStatus.programada.rawValue
     public var completedAt: Date?
     public var rescheduledFrom: Date?
+    /// Cuántas veces se movió. La primera no penaliza; las siguientes se muestran
+    /// como señal de mejora, nunca como reproche.
+    public var rescheduleCount: Int = 0
     public var createdAt: Date = Date()
     public var updatedAt: Date = Date()
 
@@ -77,7 +80,8 @@ public final class ActivityRecord {
     }
 
     public var status: ActivityStatus {
-        get { ActivityStatus(rawValue: statusRaw) ?? .programada }
+        // `fromStored` reconoce el `pendiente` de la versión anterior.
+        get { ActivityStatus.fromStored(statusRaw) }
         set { statusRaw = newValue.rawValue }
     }
 

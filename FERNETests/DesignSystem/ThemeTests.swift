@@ -33,6 +33,33 @@ final class ThemeTests: XCTestCase {
         XCTAssertEqual(controller.greeting(for: "Fer"), "Buenas noches, Fer 🌙")
     }
 
+    func testPhaseTransitionStaysInsideItsRange() {
+        XCTAssertTrue(
+            FerneMotion.phaseRange.contains(FerneMotion.phaseTransition),
+            "La transición día/noche debe durar entre 0.8 y 1.2 s."
+        )
+    }
+
+    func testCardAnimationStaysInsideTheApprovedRange() {
+        // Rango acordado para tarjetas: 220–320 ms.
+        XCTAssertTrue(FerneMotion.uiRange.contains(0.26))
+    }
+
+    func testStaggerIsSmallEnoughToFeelImmediate() {
+        XCTAssertLessThanOrEqual(FerneMotion.staggerStep, 0.06)
+    }
+
+    func testDayThemesUseDarkTextAndNightUsesLightText() {
+        // Es el fallo que corrige el trabajo: texto claro sobre el amanecer se perdía.
+        XCTAssertFalse(FerneTheme.manana.hasDarkAtmosphere)
+        XCTAssertFalse(FerneTheme.tarde.hasDarkAtmosphere)
+        XCTAssertTrue(FerneTheme.noche.hasDarkAtmosphere)
+
+        XCTAssertTrue(FerneTheme.manana.needsTextScrim, "Sobre el amanecer hace falta velo.")
+        XCTAssertTrue(FerneTheme.tarde.needsTextScrim)
+        XCTAssertFalse(FerneTheme.noche.needsTextScrim, "El cielo nocturno ya es oscuro.")
+    }
+
     func testMotionDurationsStayInsideTheApprovedRanges() {
         // §4.6: UI 200–450 ms, escenas 2–3 s.
         XCTAssertTrue(FerneMotion.uiRange.contains(FerneMotion.quick))

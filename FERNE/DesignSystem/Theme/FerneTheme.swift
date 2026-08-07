@@ -22,6 +22,28 @@ public struct FerneTheme: Equatable, Sendable {
         phase.celestialBody
     }
 
+    /// `true` si el cielo de esta franja es lo bastante oscuro para texto claro.
+    /// Mañana y tarde son luminosas: ahí el texto va oscuro, siempre.
+    public var hasDarkAtmosphere: Bool {
+        phase == .noche
+    }
+
+    /// Color de texto sobre la escena, con contraste garantizado en las tres franjas.
+    public var textOnAtmosphere: Color {
+        hasDarkAtmosphere ? FerneColor.textOnDarkAtmosphere : FerneColor.textOnAtmosphere
+    }
+
+    /// Texto secundario sobre la escena.
+    public var secondaryOnAtmosphere: Color {
+        hasDarkAtmosphere ? FerneColor.cloudPink : FerneColor.secondaryPlum
+    }
+
+    /// `true` si conviene poner un velo bajo el texto. En mañana y tarde el sol y
+    /// las nubes crean zonas muy claras donde cualquier color pierde fuerza.
+    public var needsTextScrim: Bool {
+        !hasDarkAtmosphere
+    }
+
     public var skyGradient: LinearGradient {
         LinearGradient(colors: skyColors, startPoint: .top, endPoint: .bottom)
     }

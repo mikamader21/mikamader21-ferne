@@ -26,6 +26,11 @@ struct ActivityEditorView: View {
     private static let leadOptions = [0, 5, 10, 15, 30, 60]
     private static let durationOptions = [15, 30, 45, 60, 90, 120]
 
+    /// Las opciones estándar más la sugerida de la categoría, si no estuviera.
+    private var durationChoices: [Int] {
+        Set(Self.durationOptions + [category.suggestedDurationMinutes]).sorted()
+    }
+
     private var canSave: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -67,7 +72,7 @@ struct ActivityEditorView: View {
                     .tint(FerneColor.accentPrimary)
                 if hasDuration {
                     Picker("Duración", selection: $durationMinutes) {
-                        ForEach(Self.durationOptions, id: \.self) { minutes in
+                        ForEach(durationChoices, id: \.self) { minutes in
                             Text("\(minutes) min").tag(minutes)
                         }
                     }
@@ -129,7 +134,10 @@ struct ActivityEditorView: View {
         guard title.isEmpty else { return }
         title = category.displayName
         priority = category.isKeySchedule ? .esencial : .normal
-        hasDuration = category == .gym || category == .live || category == .lectura
+        // Toda actividad necesita una ventana para poder preguntar por su resultado.
+        // Se propone la de su categoría y Fer la puede cambiar.
+        durationMinutes = category.suggestedDurationMinutes
+        hasDuration = true
     }
 
     private func save() {
@@ -157,6 +165,8 @@ struct ActivityEditorView: View {
             requiresConfirmation: category.isKeySchedule
         )
 
+        // `create` programa las alertas; si el permiso está denegado no programa
+        // nada y lo deja escrito en el log, sin prometer entrega.
         ActivityRepository(context: context).create(record)
         Haptics.shared.success()
         onSaved()

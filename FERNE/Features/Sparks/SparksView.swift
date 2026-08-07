@@ -11,14 +11,21 @@ struct SparksView: View {
 
     @Query private var allActivities: [ActivityRecord]
 
+    /// Magenta sobre cielo claro, blanco luminoso sobre cielo nocturno.
+    private var titleColor: Color {
+        themeController.theme.hasDarkAtmosphere ? FerneColor.luminousWhite : FerneColor.brandMagenta
+    }
+
     var body: some View {
         FerneScreen(sceneIntensity: 0.7) {
             ScrollView {
                 VStack(alignment: .leading, spacing: FerneSpacing.md) {
-                    Text("Destellos")
-                        .font(FerneFont.greeting)
-                        .foregroundStyle(FerneColor.brandMagenta)
-                        .padding(.top, 150)
+                    AtmosphericText {
+                        Text("Destellos")
+                            .font(FerneFont.greeting)
+                            .foregroundStyle(titleColor)
+                    }
+                    .padding(.top, 150)
 
                     FerneCard {
                         VStack(alignment: .leading, spacing: FerneSpacing.xs) {

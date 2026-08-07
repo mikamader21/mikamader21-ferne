@@ -84,7 +84,7 @@ struct OnboardingFlowView: View {
             }
             Text("Puedes cambiarlo cuando quieras desde tu perfil.")
                 .font(FerneFont.secondary)
-                .foregroundStyle(theme.bodyColor)
+                .foregroundStyle(theme.secondaryOnAtmosphere)
         }
     }
 
@@ -292,10 +292,10 @@ private struct OnboardingPage<Content: View>: View {
                 VStack(alignment: .leading, spacing: FerneSpacing.xxs) {
                     Text(title)
                         .font(FerneFont.greeting)
-                        .foregroundStyle(theme.titleColor)
+                        .foregroundStyle(theme.textOnAtmosphere)
                     Text(subtitle)
                         .font(FerneFont.secondary)
-                        .foregroundStyle(theme.bodyColor)
+                        .foregroundStyle(theme.secondaryOnAtmosphere)
                 }
                 .padding(.top, FerneSpacing.xl)
 

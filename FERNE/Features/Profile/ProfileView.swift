@@ -15,14 +15,21 @@ struct ProfileView: View {
     @State private var isConfirmingDelete = false
     @State private var isConfirmingDeleteFinal = false
 
+    /// Magenta sobre cielo claro, blanco luminoso sobre cielo nocturno.
+    private var titleColor: Color {
+        themeController.theme.hasDarkAtmosphere ? FerneColor.luminousWhite : FerneColor.brandMagenta
+    }
+
     var body: some View {
         FerneScreen(sceneIntensity: 0.55) {
             ScrollView {
                 VStack(alignment: .leading, spacing: FerneSpacing.md) {
-                    Text("Perfil")
-                        .font(FerneFont.greeting)
-                        .foregroundStyle(FerneColor.brandMagenta)
-                        .padding(.top, 150)
+                    AtmosphericText {
+                        Text("Perfil")
+                            .font(FerneFont.greeting)
+                            .foregroundStyle(titleColor)
+                    }
+                    .padding(.top, 150)
 
                     nameCard
                     greetingPreviewCard

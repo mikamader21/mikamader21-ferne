@@ -39,11 +39,59 @@ public final class ThemeController {
         provider.now
     }
 
+    /// `true` mientras la app está en primer plano. Las animaciones ambientales se
+    /// detienen en segundo plano: no tiene sentido gastar batería animando algo
+    /// que nadie ve.
+    public private(set) var isForeground = true
+
+    private var transitionTask: Task<Void, Never>?
+
     public func refresh() {
         guard UITestConfiguration.forcedPhase == nil else { return }
         let newPhase = provider.currentPhase
-        guard newPhase != phase else { return }
-        phase = newPhase
+        if newPhase != phase {
+            // La transición día/noche se anima entre 0.8 y 1.2 s.
+            withAnimation(.easeInOut(duration: FerneMotion.phaseTransition)) {
+                phase = newPhase
+            }
+        }
+        scheduleNextTransition()
+    }
+
+    public func enterForeground() {
+        isForeground = true
+        refresh()
+    }
+
+    public func enterBackground() {
+        isForeground = false
+        transitionTask?.cancel()
+        transitionTask = nil
+    }
+
+    /// Programa un único despertar en la frontera siguiente, en lugar de sondear el
+    /// reloj. Se recalcula en cada refresco, así que un cambio de zona horaria lo
+    /// corrige solo.
+    private func scheduleNextTransition() {
+        transitionTask?.cancel()
+        guard UITestConfiguration.forcedPhase == nil,
+              let provider = provider as? SystemDayPhaseProvider,
+              let next = provider.nextTransition
+        else { return }
+
+        let delay = next.timeIntervalSince(provider.now)
+        guard delay > 0 else { return }
+
+        transitionTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay + 1))
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.refresh() }
+        }
+    }
+
+    /// Reacciona a un cambio de zona horaria del sistema.
+    public func timeZoneDidChange() {
+        refresh()
     }
 
     public func greeting(for name: String) -> String {

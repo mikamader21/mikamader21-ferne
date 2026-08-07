@@ -1,5 +1,8 @@
 import SwiftData
 import SwiftUI
+#if canImport(UIKit)
+    import UIKit
+#endif
 
 /// Raíz de navegación: Splash → (onboarding la primera vez) → contenido.
 struct AppRootView: View {
@@ -27,6 +30,13 @@ struct AppRootView: View {
         .forcedReduceMotionForScreenshots()
         .accessibilityIdentifier("ferne.root")
         .onAppear { hasFinishedOnboarding = preferences.hasCompletedOnboarding }
+        // Si Fer viaja o cambia la hora del iPhone, la escena se recalcula sola.
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            theme.timeZoneDidChange()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            theme.timeZoneDidChange()
+        }
     }
 
     @ViewBuilder

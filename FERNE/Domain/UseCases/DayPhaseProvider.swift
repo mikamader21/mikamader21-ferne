@@ -12,7 +12,9 @@ public protocol DayPhaseProviding: Sendable {
 public struct SystemDayPhaseProvider: DayPhaseProviding {
     public let calendar: Calendar
 
-    public init(calendar: Calendar = .ferneDefault) {
+    /// Usa `autoupdatingCurrent` a propósito: si Fer viaja o cambia la zona horaria
+    /// del iPhone, la escena debe seguir su hora **local**, no una fija.
+    public init(calendar: Calendar = .autoupdatingCurrent) {
         self.calendar = calendar
     }
 
@@ -22,6 +24,11 @@ public struct SystemDayPhaseProvider: DayPhaseProviding {
 
     public var currentPhase: DayPhase {
         DayPhase.from(now, calendar: calendar)
+    }
+
+    /// Cuándo cambia la escena, para programarlo sin sondear el reloj.
+    public var nextTransition: Date? {
+        DayPhase.nextTransition(after: now, calendar: calendar)
     }
 }
 

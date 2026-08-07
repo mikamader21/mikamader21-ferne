@@ -87,13 +87,53 @@ public enum FerneColor {
     public static let surfaceSoft = cloudPink
     public static let accentPrimary = fernePink
     public static let accentSecondary = softPink
-    public static let textPrimary = deepPlum
-    public static let textSecondary = secondaryPlum
     public static let textTertiary = roseGray
     public static let positive = successSoft
     public static let attention = attentionAmber
 
     /// Borde sutil de tarjeta (§4.4).
+    // MARK: - Roles de texto
+
+    //
+    // Cinco roles con reglas de contraste explícitas. El error que corrigen: texto
+    // blanco sobre el amanecer melocotón-dorado, donde el contraste caía por debajo
+    // de 3:1 y la frase se perdía.
+
+    /// Texto principal sobre fondos luminosos (tarjetas, formularios).
+    /// `deepPlum` sobre `warmWhite` ≈ 15:1.
+    public static let textPrimary = deepPlum
+    /// Texto secundario sobre fondos luminosos. ≈ 8:1.
+    public static let textSecondary = secondaryPlum
+    /// Texto atenuado, solo para metadatos NO esenciales. ≈ 4.6:1.
+    public static let textMuted = roseGray
+
+    /// Texto **sobre la escena atmosférica**.
+    ///
+    /// Siempre oscuro, nunca blanco: el cielo de FERNÉ es claro en mañana y tarde,
+    /// y una nube puede aclarar cualquier zona. `deepPlum` funciona sobre las tres
+    /// franjas. En noche, la vista aplica `textOnDarkAtmosphere`.
+    public static let textOnAtmosphere = deepPlum
+    /// Texto sobre la escena nocturna, que sí es oscura. ≈ 12:1 sobre `deepPlum`.
+    public static let textOnDarkAtmosphere = luminousWhite
+    /// Texto sobre superficies de vidrio.
+    public static let textOnGlass = deepPlum
+
+    /// Velo sutil bajo un texto que cruza una zona clara.
+    ///
+    /// Nunca una caja negra: un degradado del blanco cálido de la propia paleta,
+    /// que aclara el fondo para que el texto oscuro destaque.
+    public static let textScrim = LinearGradient(
+        colors: [
+            luminousWhite.opacity(0.0),
+            luminousWhite.opacity(0.55),
+            luminousWhite.opacity(0.75),
+            luminousWhite.opacity(0.55),
+            luminousWhite.opacity(0.0)
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     public static let cardBorder = softPink.opacity(0.22)
     /// Sombra rosada ligera (§4.4).
     public static let cardShadow = fernePink.opacity(0.14)

@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 @main
 struct FerneApp: App {
@@ -10,6 +11,16 @@ struct FerneApp: App {
     /// Contenedor de SwiftData. En producción arranca **vacío**; solo los UI tests
     /// reciben un contenedor en memoria con datos deterministas.
     private let container = ModelContainerFactory.make()
+    private let responder: NotificationResponder
+
+    init() {
+        let container = ModelContainerFactory.make()
+        self.container = container
+        responder = NotificationResponder(container: container)
+        let center = UNUserNotificationCenter.current()
+        center.delegate = responder
+        NotificationCategories.registerAll(on: center)
+    }
 
     var body: some Scene {
         WindowGroup {

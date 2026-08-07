@@ -12,11 +12,17 @@ public enum FerneMotion {
     public static let standard: Double = 0.32
     public static let expressive: Double = 0.45
     public static let splash: Double = 2.6
+    /// Transición día → noche. Rango acordado: 0.8–1.2 s.
+    public static let phaseTransition: Double = 1.0
+    /// Retraso entre tarjetas al entrar. Muy pequeño: escalonar demasiado se siente lento.
+    public static let staggerStep: Double = 0.045
 
     /// Rango válido para transiciones de interfaz. Fuera de él, es un error de diseño.
     public static let uiRange: ClosedRange<Double> = 0.20 ... 0.45
     /// Rango válido para escenas cinematográficas.
     public static let sceneRange: ClosedRange<Double> = 2.0 ... 3.0
+    /// Rango válido para la transición día/noche.
+    public static let phaseRange: ClosedRange<Double> = 0.8 ... 1.2
 
     // MARK: - Curvas
 
@@ -26,6 +32,21 @@ public enum FerneMotion {
     public static let elasticCheck = Animation.spring(response: 0.38, dampingFraction: 0.58)
     /// Actualización animada de barras y círculos de progreso.
     public static let progress = Animation.easeInOut(duration: expressive)
+    /// Transición de tarjeta. Rango acordado: 220–320 ms.
+    public static let card = Animation.easeInOut(duration: 0.26)
+    /// Respuesta al pulsar el FAB: firme, sin rebote exagerado.
+    public static let tap = Animation.spring(response: 0.24, dampingFraction: 0.75)
+
+    /// Entrada escalonada de la tarjeta en la posición `index`.
+    public static func cardEntrance(index: Int) -> Animation {
+        card.delay(Double(min(index, 8)) * staggerStep)
+    }
+
+    /// Con Reduce Motion se sustituyen desplazamientos, escalas y pulsos por un
+    /// cambio corto de opacidad: el movimiento desaparece, la información no.
+    public static func entrance(index: Int, reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeOut(duration: quick) : cardEntrance(index: index)
+    }
 
     // MARK: - Ambiente
 
