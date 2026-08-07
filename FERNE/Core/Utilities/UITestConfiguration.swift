@@ -95,15 +95,6 @@ public enum UITestConfiguration {
         return support.appendingPathComponent("FERNE-RuntimeSmoke.store")
     }
 
-    /// Fuerza que el onboarding se dé por hecho.
-    ///
-    /// Necesario porque un simulador limpio no tiene preferencias guardadas: sin
-    /// esto, cualquier prueba que quiera empezar en Inicio se toparía con el
-    /// onboarding y fallaría por un motivo que no estaba probando.
-    public static var skipsOnboarding: Bool {
-        value(for: "-FERNESkipOnboarding") == "1"
-    }
-
     /// Fuerza el comportamiento de Reduce Motion **a nivel de app**.
     ///
     /// **Limitación honesta:** esto NO activa el ajuste real de iOS. Sirve para
