@@ -54,6 +54,10 @@ struct OnboardingFlowView: View {
                     .padding(.bottom, FerneSpacing.lg)
             }
         }
+        // `.contain` publica el contenedor como nodo consultable sin ocultar
+        // sus hijos. Sin esto el identificador existe pero no hay elemento
+        // que lo lleve, y la automatización no puede encontrarlo.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("screen.onboarding")
     }
 

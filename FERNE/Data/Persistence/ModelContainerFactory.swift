@@ -29,17 +29,13 @@ public enum ModelContainerFactory {
         /// reutiliza, que es lo que permite comprobar que los datos sobreviven a un
         /// relanzamiento.
         private static func makeIsolatedStore() -> ModelContainer {
-            guard let url = UITestConfiguration.runtimeSmokeStoreURL else {
+            // Idempotente: si `UserPreferences` ya lo hizo, aquí no ocurre nada.
+            // Lo importante es que suceda antes de abrir el almacén, llegue quien
+            // llegue primero.
+            RuntimeSmokeEnvironment.resetIfNeeded()
+
+            guard let url = RuntimeSmokeEnvironment.storeURL else {
                 return makeEmptyInMemory()
-            }
-            if UITestConfiguration.resetsStore {
-                let manager = FileManager.default
-                for suffix in ["", "-shm", "-wal"] {
-                    let path = URL(fileURLWithPath: url.path + suffix)
-                    try? manager.removeItem(at: path)
-                }
-                UserDefaults.standard
-                    .removePersistentDomain(forName: UITestConfiguration.runtimeSmokeSuiteName)
             }
             let configuration = ModelConfiguration(schema: Schema(FerneSchemaV1.models), url: url)
             do {

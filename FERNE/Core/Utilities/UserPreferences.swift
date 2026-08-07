@@ -28,10 +28,14 @@ public final class UserPreferences {
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults? = nil) {
+        // La limpieza va PRIMERO: si se hiciera después, se leerían los ajustes de
+        // un escenario anterior antes de borrarlos.
+        RuntimeSmokeEnvironment.resetIfNeeded()
+
         if let defaults {
             self.defaults = defaults
         } else if UITestConfiguration.isRuntimeSmoke,
-                  let suite = UserDefaults(suiteName: UITestConfiguration.runtimeSmokeSuiteName)
+                  let suite = UserDefaults(suiteName: RuntimeSmokeEnvironment.defaultsSuiteName)
         {
             // Suite aislada: los ajustes del smoke no tocan los reales y pueden
             // borrarse por completo entre escenarios.

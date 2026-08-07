@@ -82,19 +82,6 @@ public enum UITestConfiguration {
         arguments.contains("-FERNEResetStore") || environment["FERNE_RESET_STORE"] == "1"
     }
 
-    /// Suite de `UserDefaults` aislada para el modo smoke, para que los ajustes
-    /// tampoco contaminen ni se contaminen entre escenarios.
-    public static let runtimeSmokeSuiteName = "com.ferne.app.runtimesmoke"
-
-    /// Carpeta del almacén aislado.
-    public static var runtimeSmokeStoreURL: URL? {
-        guard let support = try? FileManager.default.url(
-            for: .applicationSupportDirectory, in: .userDomainMask,
-            appropriateFor: nil, create: true
-        ) else { return nil }
-        return support.appendingPathComponent("FERNE-RuntimeSmoke.store")
-    }
-
     /// Fuerza el comportamiento de Reduce Motion **a nivel de app**.
     ///
     /// **Limitación honesta:** esto NO activa el ajuste real de iOS. Sirve para

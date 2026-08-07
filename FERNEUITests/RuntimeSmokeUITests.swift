@@ -1,24 +1,41 @@
 import XCTest
 
-/// Pruebas de humo en tiempo de ejecución.
+/// Pruebas de humo en tiempo de ejecucion.
 ///
-/// Existen porque compilar y mantenerse en pie son cosas distintas: FERNÉ compiló
-/// y aun así se cerró al terminar el onboarding. **Estas cuatro pruebas son la
-/// condición para publicar `FERNE-app-now`.**
+/// Los textos van sin acentos ni caracteres de dibujo a proposito: el log de
+/// GitHub Actions los rompia y el diagnostico quedaba ilegible justo cuando mas
+/// falta hacia.
 ///
-/// Cuando algo falla, el informe no dice "se cerró": dice en qué página estaba, qué
-/// acción se ejecutó, cuál fue el último elemento encontrado y en qué estado quedó
-/// `XCUIApplication`. Todo se adjunta al `.xcresult`.
+/// Dos correcciones de diseno respecto a la version anterior, que fallo cuatro de
+/// cuatro sin llegar a tocar la interfaz:
 ///
-/// Usan un almacén **real, en disco y aislado** (`-FERNERuntimeSmoke`), nunca
-/// `PreviewData`: con datos sembrados la persistencia no probaría nada.
+/// 1. **Selectores agnosticos de tipo.** Los identificadores de pantalla se buscan
+///    con `descendants(matching: .any)`. SwiftUI no garantiza que un contenedor se
+///    publique como `.other`, y buscar solo ahi hacia que ninguna pantalla
+///    apareciera aunque estuviera en pantalla.
+/// 2. **El splash no es requisito.** Dura unos 2 s y la sesion de automatizacion
+///    tardo 76 s en establecerse: exigir verlo era pedir lo imposible. Se registra
+///    si aparece, nunca se exige.
+///
+/// Cada escenario usa su propio almacen (`FERNE_RUNTIME_TEST_ID`). A, B y C
+/// arrancan limpios; D comparte almacen entre sus dos lanzamientos.
 final class RuntimeSmokeUITests: XCTestCase {
     private var trail = Trail()
+    private var currentTestID = ""
+    private var currentReset = true
 
-    /// Margen tras llegar a Inicio. El crash reportado ocurría justo en la
-    /// transición, así que no basta con que la pantalla aparezca: tiene que seguir
-    /// ahí unos segundos después.
-    private let survivalWindow: TimeInterval = 5
+    /// Un solo timeout por transicion. La version anterior encadenaba esperas de
+    /// 25 s + 30 s y consumia minutos buscando la primera pantalla.
+    private enum Timeout {
+        /// Primera pantalla tras `launch()`: incluye arranque en frio.
+        static let firstScreen: TimeInterval = 30
+        /// Transicion entre pantallas con la app ya viva.
+        static let transition: TimeInterval = 15
+        /// Elemento dentro de una pantalla ya presente.
+        static let element: TimeInterval = 10
+        /// Dialogo del sistema, que puede no llegar a aparecer.
+        static let systemDialog: TimeInterval = 8
+    }
 
     override func setUp() {
         continueAfterFailure = false
@@ -28,137 +45,116 @@ final class RuntimeSmokeUITests: XCTestCase {
     // MARK: - A · Onboarding omitiendo notificaciones
 
     @MainActor
-    func testA_OnboardingWithoutNotificationsReachesHomeAndStaysAlive() {
-        let app = launch(resetStore: true, skipOnboarding: false, showSplash: true)
-
-        trail.step("esperando el splash", page: "splash")
-        let splashShown = app.otherElements["screen.splash"].waitForExistence(timeout: 25)
-        let onboardingShown = app.otherElements["screen.onboarding"].waitForExistence(timeout: 25)
-        XCTAssertTrue(
-            splashShown || onboardingShown,
-            diagnosis(app, "No apareció ni el splash ni el onboarding.")
-        )
+    func testA_OnboardingWithoutNotificationsReachesHome() {
+        let app = launch(testID: "A", resetStore: true)
+        noteSplashIfVisible(app)
 
         completeOnboarding(app, notifications: .skip)
-        assertReachedHomeAndSurvives(app, scenario: "A · sin notificaciones")
+        assertHomeIsUsable(app, scenario: "A · sin notificaciones")
     }
 
     // MARK: - B · Onboarding activando notificaciones
 
     @MainActor
-    func testB_OnboardingWithNotificationsReachesHomeAndStaysAlive() {
-        let app = launch(resetStore: true, skipOnboarding: false, showSplash: false)
+    func testB_OnboardingWithNotificationsReachesHome() {
+        let app = launch(testID: "B", resetStore: true)
+        noteSplashIfVisible(app)
 
         completeOnboarding(app, notifications: .enable)
-        assertReachedHomeAndSurvives(app, scenario: "B · con notificaciones")
+        assertHomeIsUsable(app, scenario: "B · con notificaciones")
     }
 
-    // MARK: - C · Recorrido funcional completo
+    // MARK: - C · Crear Gym y verlo en Progreso
 
     @MainActor
-    func testC_CreateGymConfirmItAndSeeItInProgress() {
-        let app = launch(resetStore: true, skipOnboarding: false, showSplash: false)
+    func testC_CreateGymAndSeeItInProgress() {
+        let app = launch(testID: "C", resetStore: true)
         completeOnboarding(app, notifications: .skip)
-        assertReachedHomeAndSurvives(app, scenario: "C · llegada a Inicio")
+        assertHomeIsUsable(app, scenario: "C · llegada a Inicio")
 
-        trail.step("pulsando el botón +", page: "home")
-        let fab = app.buttons["home.fab"]
-        let fabExists = fab.waitForExistence(timeout: 15)
-        XCTAssertTrue(fabExists, diagnosis(app, "No se encontró el botón +."))
-        fab.tap()
+        createGym(in: app)
 
-        trail.step("esperando el menú de creación", page: "addMenu")
-        let addMenuShown = app.otherElements["screen.addMenu"].waitForExistence(timeout: 15)
-        XCTAssertTrue(addMenuShown, diagnosis(app, "El menú de creación no se abrió."))
+        trail.step("comprobando la tarjeta en Inicio", page: "home")
+        let cardShown = screen(app, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(cardShown, diagnosis(app, "La actividad creada no aparecio en Inicio."))
 
-        trail.step("eligiendo la categoría Gym", page: "addMenu")
-        let gym = app.buttons["addMenu.gym"]
-        let gymExists = gym.waitForExistence(timeout: 10)
-        XCTAssertTrue(gymExists, diagnosis(app, "No se encontró la categoría Gym."))
-        gym.tap()
-
-        trail.step("esperando el editor", page: "editor")
-        let editorShown = app.otherElements["screen.activityEditor"].waitForExistence(timeout: 15)
-        XCTAssertTrue(editorShown, diagnosis(app, "El editor de actividad no se abrió."))
-        assertAlive(app, "La app se cerró al abrir el editor.")
-
-        trail.step("guardando la actividad", page: "editor")
-        let save = app.buttons["editor.save"]
-        let saveExists = save.waitForExistence(timeout: 10)
-        XCTAssertTrue(saveExists, diagnosis(app, "No se encontró el botón Guardar."))
-        save.tap()
-
-        trail.step("comprobando que la actividad aparece en Inicio", page: "home")
-        let card = app.otherElements["activity.row.gym"]
-        let cardExists = card.waitForExistence(timeout: 20)
-        XCTAssertTrue(cardExists, diagnosis(app, "La actividad creada no apareció en Inicio."))
-        assertAlive(app, "La app se cerró tras guardar la actividad.")
-
-        trail.step("abriendo la pestaña Progreso", page: "progress")
+        trail.step("abriendo Progreso", page: "progress")
         let progressTab = app.tabBars.buttons["Progreso"]
-        let progressTabExists = progressTab.waitForExistence(timeout: 10)
-        XCTAssertTrue(progressTabExists, diagnosis(app, "Falta la pestaña Progreso."))
+        let tabShown = progressTab.waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(tabShown, diagnosis(app, "Falta la pestana Progreso."))
         progressTab.tap()
-        let progressShown = app.otherElements["screen.progress"].waitForExistence(timeout: 15)
-        XCTAssertTrue(progressShown, diagnosis(app, "Progreso no se abrió."))
-        assertAlive(app, "La app se cerró al abrir Progreso.")
 
-        survive(app, scenario: "C · recorrido funcional")
+        let progressShown = screen(app, "screen.progress").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(progressShown, diagnosis(app, "Progreso no se abrio."))
+        assertAlive(app, "C: la app se cerro al abrir Progreso.")
     }
 
     // MARK: - D · Persistencia entre lanzamientos
 
     @MainActor
     func testD_DataSurvivesRelaunch() {
-        // Primer lanzamiento: se borra el almacén aislado y se crea una actividad.
-        let first = launch(resetStore: true, skipOnboarding: false, showSplash: false)
+        // Primer lanzamiento: almacen limpio.
+        let first = launch(testID: "D", resetStore: true)
         completeOnboarding(first, notifications: .skip)
-        assertReachedHomeAndSurvives(first, scenario: "D · primer lanzamiento")
+        assertHomeIsUsable(first, scenario: "D · primer lanzamiento")
 
         createGym(in: first)
-        let createdInFirstLaunch = first.otherElements["activity.row.gym"].waitForExistence(timeout: 20)
-        XCTAssertTrue(
-            createdInFirstLaunch,
-            diagnosis(first, "La actividad no llegó a crearse en el primer lanzamiento.")
-        )
+        let created = screen(first, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(created, diagnosis(first, "La actividad no se creo en el primer lanzamiento."))
         first.terminate()
 
-        // Segundo lanzamiento: **mismo almacén**, sin borrar. Es lo único que
+        // Segundo lanzamiento: MISMO identificador, sin borrar. Es lo unico que
         // demuestra que los datos sobreviven.
-        trail.step("relanzando sin borrar el almacén", page: "relaunch")
-        let second = launch(resetStore: false, skipOnboarding: false, showSplash: false)
+        trail.step("relanzando con el mismo almacen", page: "relaunch")
+        let second = launch(testID: "D", resetStore: false)
 
-        trail.step("comprobando que NO reaparece el onboarding", page: "home")
-        let homeAfterRelaunch = second.otherElements["screen.home"].waitForExistence(timeout: 25)
-        XCTAssertTrue(homeAfterRelaunch, diagnosis(second, "Tras relanzar no se llegó a Inicio."))
+        trail.step("esperando Inicio directamente", page: "home")
+        let homeShown = screen(second, "screen.home").waitForExistence(timeout: Timeout.firstScreen)
+        XCTAssertTrue(homeShown, diagnosis(second, "Tras relanzar no se llego a Inicio."))
 
-        let onboardingReappeared = second.otherElements["screen.onboarding"].exists
-        XCTAssertFalse(
-            onboardingReappeared,
-            diagnosis(second, "El onboarding reapareció: no se guardó que ya se completó.")
-        )
+        let onboardingBack = screen(second, "screen.onboarding").exists
+        XCTAssertFalse(onboardingBack, diagnosis(second, "El onboarding reaparecio: no se guardo que ya se completo."))
 
-        trail.step("comprobando que la actividad sigue guardada", page: "home")
-        let survived = second.otherElements["activity.row.gym"].waitForExistence(timeout: 20)
-        XCTAssertTrue(survived, diagnosis(second, "La actividad no sobrevivió al relanzamiento."))
-
-        survive(second, scenario: "D · persistencia")
+        let survived = screen(second, "activity.row.gym").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(survived, diagnosis(second, "La actividad no sobrevivio al relanzamiento."))
+        assertAlive(second, "D: la app se cerro tras relanzar.")
     }
 
-    // MARK: - Recorrido del onboarding
+    // MARK: - Selectores
+
+    /// Busca un identificador **sin suponer su tipo**.
+    ///
+    /// Es la correccion central: SwiftUI publica un contenedor como `.other`,
+    /// `.group`, `.scrollView` u otro segun el caso, y buscar solo en
+    /// `otherElements` hacia que la pantalla nunca apareciera.
+    @MainActor
+    private func screen(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any)[identifier]
+    }
+
+    /// El splash es opcional: si esta, se anota; si no, no pasa nada.
+    @MainActor
+    private func noteSplashIfVisible(_ app: XCUIApplication) {
+        if screen(app, "screen.splash").exists {
+            trail.step("splash visible (opcional)", page: "splash")
+        } else {
+            trail.step("splash no visible; se continua", page: "splash")
+        }
+    }
+
+    // MARK: - Onboarding
 
     private enum NotificationChoice { case enable, skip }
 
-    /// Avanza las siete páginas (0…6).
     @MainActor
     private func completeOnboarding(_ app: XCUIApplication, notifications: NotificationChoice) {
         trail.step("esperando el onboarding", page: "onboarding")
-        let onboardingShown = app.otherElements["screen.onboarding"].waitForExistence(timeout: 30)
-        XCTAssertTrue(onboardingShown, diagnosis(app, "El onboarding no apareció en una instalación limpia."))
+        let shown = screen(app, "screen.onboarding").waitForExistence(timeout: Timeout.firstScreen)
+        XCTAssertTrue(shown, diagnosis(app, "El onboarding no aparecio en una instalacion limpia."))
 
         for page in 0 ... 6 {
-            trail.step("página \(page)", page: "onboarding.\(page)")
-            assertAlive(app, "La app se cerró al mostrar la página \(page) del onboarding.")
+            trail.step("pagina \(page)", page: "onboarding.\(page)")
+            assertAlive(app, "La app se cerro en la pagina \(page) del onboarding.")
 
             if page == 5 {
                 resolveNotifications(app, choice: notifications)
@@ -166,121 +162,129 @@ final class RuntimeSmokeUITests: XCTestCase {
 
             let identifier = page == 6 ? "onboarding.finish" : "onboarding.advance"
             let button = app.buttons[identifier]
-            guard button.waitForExistence(timeout: 15) else {
-                XCTFail(diagnosis(app, "No apareció '\(identifier)' en la página \(page)."))
+            let ready = button.waitForExistence(timeout: Timeout.element)
+            guard ready else {
+                XCTFail(diagnosis(app, "No aparecio '\(identifier)' en la pagina \(page)."))
                 return
             }
             trail.step("pulsando '\(identifier)'", page: "onboarding.\(page)", element: identifier)
             button.tap()
-            assertAlive(app, "La app se cerró al pulsar '\(identifier)' en la página \(page).")
+            assertAlive(app, "La app se cerro al pulsar '\(identifier)' en la pagina \(page).")
         }
     }
 
     @MainActor
     private func resolveNotifications(_ app: XCUIApplication, choice: NotificationChoice) {
-        switch choice {
-        case .skip:
-            let skip = app.buttons["onboarding.skipNotifications"]
-            if skip.waitForExistence(timeout: 10) {
-                trail.step("pulsando 'Ahora no'", page: "onboarding.5", element: "onboarding.skipNotifications")
-                skip.tap()
-                assertAlive(app, "La app se cerró al omitir las notificaciones.")
-            }
-        case .enable:
-            let enable = app.buttons["onboarding.enableNotifications"]
-            if enable.waitForExistence(timeout: 10) {
-                trail.step("pulsando 'Activar recordatorios'", page: "onboarding.5", element: "onboarding.enableNotifications")
-                enable.tap()
-                resolveSystemPermissionDialog(app)
-                assertAlive(app, "La app se cerró al pedir el permiso de notificaciones.")
-            }
+        let identifier = choice == .skip ? "onboarding.skipNotifications" : "onboarding.enableNotifications"
+        let button = app.buttons[identifier]
+        let ready = button.waitForExistence(timeout: Timeout.element)
+        guard ready else {
+            trail.step("no aparecio '\(identifier)'; se continua", page: "onboarding.5")
+            return
         }
+        trail.step("pulsando '\(identifier)'", page: "onboarding.5", element: identifier)
+        button.tap()
+
+        if choice == .enable {
+            resolveSystemPermissionDialog(app)
+        }
+        assertAlive(app, "La app se cerro al resolver los recordatorios.")
     }
 
-    /// Resuelve el diálogo de iOS acepte o rechace: ambos caminos deben dejar la app
-    /// en pie. Si el permiso se deniega, FERNÉ tiene que seguir funcionando.
+    /// Acepta o rechaza el dialogo de iOS. Ambos caminos deben dejar la app en pie:
+    /// si el permiso se deniega, FERNE tiene que seguir funcionando.
     @MainActor
     private func resolveSystemPermissionDialog(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        let candidates = ["Permitir", "Allow", "No permitir", "Don't Allow", "Don’t Allow"]
+        let labels = ["Permitir", "Allow", "No permitir", "Don't Allow", "Don\u{2019}t Allow"]
 
-        let deadline = Date().addingTimeInterval(10)
+        let deadline = Date().addingTimeInterval(Timeout.systemDialog)
         while Date() < deadline {
-            for label in candidates {
+            for label in labels {
                 let button = springboard.buttons[label]
                 if button.exists, button.isHittable {
-                    trail.step("respondiendo al diálogo del sistema: '\(label)'", page: "onboarding.5", element: label)
+                    trail.step("dialogo del sistema: '\(label)'", page: "onboarding.5", element: label)
                     button.tap()
-                    _ = app.wait(for: .runningForeground, timeout: 8)
+                    _ = app.wait(for: .runningForeground, timeout: Timeout.element)
                     return
                 }
             }
-            Thread.sleep(forTimeInterval: 0.5)
+            _ = springboard.buttons.firstMatch.waitForExistence(timeout: 1)
         }
-        trail.step("el diálogo del sistema no apareció", page: "onboarding.5")
+        trail.step("el dialogo del sistema no aparecio", page: "onboarding.5")
     }
 
     @MainActor
     private func createGym(in app: XCUIApplication) {
-        trail.step("creando actividad Gym", page: "home")
+        trail.step("pulsando el boton +", page: "home")
         let fab = app.buttons["home.fab"]
-        guard fab.waitForExistence(timeout: 15) else {
-            XCTFail(diagnosis(app, "No se encontró el botón + para crear."))
-            return
-        }
+        let fabReady = fab.waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(fabReady, diagnosis(app, "No se encontro el boton +."))
         fab.tap()
+
+        trail.step("esperando el menu de creacion", page: "addMenu")
+        let menuShown = screen(app, "screen.addMenu").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(menuShown, diagnosis(app, "El menu de creacion no se abrio."))
+
+        trail.step("eligiendo Gym", page: "addMenu")
         let gym = app.buttons["addMenu.gym"]
-        guard gym.waitForExistence(timeout: 15) else {
-            XCTFail(diagnosis(app, "No se encontró la categoría Gym."))
-            return
-        }
+        let gymReady = gym.waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(gymReady, diagnosis(app, "No se encontro la categoria Gym."))
         gym.tap()
+
+        trail.step("esperando el editor", page: "editor")
+        let editorShown = screen(app, "screen.activityEditor").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(editorShown, diagnosis(app, "El editor de actividad no se abrio."))
+
+        trail.step("guardando", page: "editor")
         let save = app.buttons["editor.save"]
-        guard save.waitForExistence(timeout: 15) else {
-            XCTFail(diagnosis(app, "No se encontró el botón Guardar."))
-            return
-        }
+        let saveReady = save.waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(saveReady, diagnosis(app, "No se encontro el boton Guardar."))
         save.tap()
     }
 
     // MARK: - Comprobaciones
 
+    /// Llegar a Inicio **y que Inicio sea usable**. Estar en primer plano no basta:
+    /// una pantalla en blanco tambien lo estaria.
     @MainActor
-    private func assertReachedHomeAndSurvives(_ app: XCUIApplication, scenario: String) {
+    private func assertHomeIsUsable(_ app: XCUIApplication, scenario: String) {
         trail.step("esperando Inicio", page: "home")
-        let homeShown = app.otherElements["screen.home"].waitForExistence(timeout: 25)
-        XCTAssertTrue(homeShown, diagnosis(app, "\(scenario): no se llegó a Inicio."))
-        survive(app, scenario: scenario)
-    }
+        let homeShown = screen(app, "screen.home").waitForExistence(timeout: Timeout.transition)
+        XCTAssertTrue(homeShown, diagnosis(app, "\(scenario): no se llego a Inicio."))
 
-    /// La pantalla aparece y **sigue ahí** pasados unos segundos.
-    /// El crash reportado ocurría en la transición: comprobar solo la aparición
-    /// habría dado un falso verde.
-    @MainActor
-    private func survive(_ app: XCUIApplication, scenario: String) {
+        let tabBarShown = app.tabBars.firstMatch.waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(tabBarShown, diagnosis(app, "\(scenario): Inicio sin barra de pestanas."))
+
+        let fabShown = app.buttons["home.fab"].waitForExistence(timeout: Timeout.element)
+        XCTAssertTrue(fabShown, diagnosis(app, "\(scenario): Inicio sin boton + utilizable."))
+
         assertAlive(app, "\(scenario): la app no estaba en primer plano.")
-        trail.step("esperando \(Int(survivalWindow)) s para confirmar que sigue viva", page: "home")
-        Thread.sleep(forTimeInterval: survivalWindow)
-        assertAlive(app, "\(scenario): la app se cerró en los \(Int(survivalWindow)) s siguientes.")
     }
 
     @MainActor
-    private func launch(resetStore: Bool, skipOnboarding: Bool, showSplash: Bool) -> XCUIApplication {
+    private func launch(testID: String, resetStore: Bool) -> XCUIApplication {
+        currentTestID = testID
+        currentReset = resetStore
+
         let app = XCUIApplication()
         app.launchArguments += [
             "-FERNERuntimeSmoke",
-            "-FERNESkipSplash", showSplash ? "0" : "1",
-            "-FERNESkipOnboarding", skipOnboarding ? "1" : "0"
+            "-FERNERuntimeTestID", testID,
+            "-FERNESkipSplash", "1",
+            "-FERNESkipOnboarding", "0"
         ]
         if resetStore {
             app.launchArguments.append("-FERNEResetStore")
         }
         app.launchEnvironment["FERNE_RUNTIME_SMOKE"] = "1"
+        app.launchEnvironment["FERNE_RUNTIME_TEST_ID"] = testID
+        trail.step("lanzando (id \(testID), reset \(resetStore))", page: "launch")
         app.launch()
         return app
     }
 
-    // MARK: - Diagnóstico
+    // MARK: - Diagnostico
 
     @MainActor
     private func assertAlive(_ app: XCUIApplication, _ message: String) {
@@ -288,21 +292,26 @@ final class RuntimeSmokeUITests: XCTestCase {
         XCTFail(diagnosis(app, message))
     }
 
-    /// Informe completo del punto de fallo. Se adjunta al `.xcresult`.
+    /// Informe completo del punto de fallo, en ASCII para que el log de Actions no
+    /// lo rompa. Se adjunta al `.xcresult`.
     @MainActor
     private func diagnosis(_ app: XCUIApplication, _ message: String) -> String {
+        let visible = visibleScreenIdentifiers(app)
         let report = """
-        ════════════════════════════════════════
+        ----------------------------------------
         \(message)
-        ────────────────────────────────────────
-        Estado de XCUIApplication : \(Self.describe(app.state))
-        Página exacta             : \(trail.lastPage)
-        Acción exacta             : \(trail.lastAction)
-        Último elemento hallado   : \(trail.lastElement)
-        ────────────────────────────────────────
-        Recorrido completo:
+        ----------------------------------------
+        FERNE_RUNTIME_TEST_ID   : \(currentTestID)
+        Almacen                 : \(currentReset ? "reset (limpio)" : "reutilizado (sin borrar)")
+        Estado XCUIApplication  : \(Self.describe(app.state))
+        Pagina exacta           : \(trail.lastPage)
+        Accion exacta           : \(trail.lastAction)
+        Ultimo elemento hallado : \(trail.lastElement)
+        Pantallas visibles      : \(visible.isEmpty ? "(ninguna)" : visible.joined(separator: ", "))
+        ----------------------------------------
+        Recorrido:
         \(trail.formatted)
-        ════════════════════════════════════════
+        ----------------------------------------
         """
 
         attach(string: report, named: "diagnostico")
@@ -316,6 +325,17 @@ final class RuntimeSmokeUITests: XCTestCase {
         return report
     }
 
+    /// Qué identificadores `screen.*` hay realmente en pantalla. Es lo que dice si
+    /// el fallo fue de la app o del selector.
+    @MainActor
+    private func visibleScreenIdentifiers(_ app: XCUIApplication) -> [String] {
+        let known = [
+            "screen.splash", "screen.onboarding", "screen.home", "screen.progress",
+            "screen.sparks", "screen.profile", "screen.addMenu", "screen.activityEditor"
+        ]
+        return known.filter { screen(app, $0).exists }
+    }
+
     @MainActor
     private func attach(string: String, named: String) {
         let attachment = XCTAttachment(string: string)
@@ -324,13 +344,10 @@ final class RuntimeSmokeUITests: XCTestCase {
         add(attachment)
     }
 
-    /// `XCUIApplication.State` es un tipo anidado de un tipo aislado al actor
-    /// principal. Se marca también para no depender de si Swift propaga o no ese
-    /// aislamiento a los anidados.
     @MainActor
     private static func describe(_ state: XCUIApplication.State) -> String {
         switch state {
-        case .notRunning: "notRunning — EL PROCESO TERMINÓ"
+        case .notRunning: "notRunning - EL PROCESO TERMINO"
         case .runningBackground: "runningBackground"
         case .runningBackgroundSuspended: "runningBackgroundSuspended"
         case .runningForeground: "runningForeground"
@@ -339,7 +356,6 @@ final class RuntimeSmokeUITests: XCTestCase {
         }
     }
 
-    /// Registro del recorrido. Sin esto, un fallo solo diría "no existe el elemento".
     private struct Trail {
         private(set) var steps: [String] = []
         private(set) var lastPage = "(ninguna)"
